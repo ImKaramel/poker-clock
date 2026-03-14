@@ -9,10 +9,10 @@ import (
 )
 
 type AuthHandler struct {
-	authService *service.InMemoryAuthService
+	authService *service.AuthService
 }
 
-func NewAuthHandler(authService *service.InMemoryAuthService) *AuthHandler {
+func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
 	}
@@ -29,7 +29,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.authService.Register(req.Email, req.Password)
+	user, err := h.authService.Register(r.Context(), req.Email, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -59,7 +59,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.authService.Login(req.Email, req.Password)
+	user, err := h.authService.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return

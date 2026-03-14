@@ -1,57 +1,60 @@
 package service
 
 import (
+	"context"
 	"errors"
-	"sync"
 
 	"backend/internal/domain"
+	"backend/internal/repository"
 )
 
-type AuthService struct{}
+var (
+	ErrUserExists         = errors.New("user already exists")
+	ErrInvalidCredentials = errors.New("invalid credentials")
+)
 
-// TODO: key by email --- generate uuid
-type InMemoryAuthService struct {
-	mu    sync.Mutex
-	users map[string]domain.User // key by emailб
+type AuthService struct {
+	repo repository.UserRepository
 }
 
-func NewAuthService() *InMemoryAuthService {
-	return &InMemoryAuthService{
-		users: make(map[string]domain.User),
-	}
+func NewAuthService(repo repository.UserRepository) *AuthService {
+	return &AuthService{repo: repo}
 }
 
-func (s *InMemoryAuthService) Register(email, password string) (domain.User, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *AuthService) Register(ctx context.Context, email, password string) (domain.User, error) {
 
-	if _, exists := s.users[email]; exists {
-		return domain.User{}, errors.New("user already exists")
+	existing, err := s.repo.FindByEmail(ctx, email)
+	if err != nil {
+		return domain.User{}, err
+	}
+	if existing != nil {
+		return domain.User{}, ErrUserExists
 	}
 
-	user := domain.User{
-		ID:       email,
+	user := &domain.User{
 		Email:    email,
 		Password: password,
 	}
+	if err := s.repo.Create(ctx, user); err != nil {
+		return domain.User{}, err
+	}
 
-	s.users[email] = user
-
-	return user, nil
+	return *user, nil
 }
 
-func (s *InMemoryAuthService) Login(email, password string) (domain.User, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *AuthService) Login(ctx context.Context, email, password string) (domain.User, error) {
 
-	user, exists := s.users[email]
-	if !exists {
-		return domain.User{}, errors.New("invalid credentials")
+	user, err := s.repo.FindByEmail(ctx, email)
+	if err != nil {
+		return domain.User{}, err
+	}
+	if user == nil {
+		return domain.User{}, ErrInvalidCredentials
 	}
 
 	if user.Password != password {
-		return domain.User{}, errors.New("invalid credentials")
+		return domain.User{}, ErrInvalidCredentials
 	}
 
-	return user, nil
+	return *user, nil
 }
