@@ -10,14 +10,13 @@ import (
 	"backend/internal/service"
 )
 
-func NewRouter() http.Handler {
+func NewRouter(authService *service.AuthService, tournamentService *service.TournamentService) http.Handler {
 	r := chi.NewRouter()
-
-	authService := service.NewAuthService()
-	tournamentService := service.NewTournamentService()
 
 	authHandler := handlers.NewAuthHandler(authService)
 	tournamentHandler := handlers.NewTournamentHandler(tournamentService)
+	levelHandler := handlers.NewLevelHandler(tournamentService)
+	timerHandler := handlers.NewTimerHandler(tournamentService)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
@@ -31,6 +30,16 @@ func NewRouter() http.Handler {
 
 		r.Post("/", tournamentHandler.CreateTournament)
 		r.Get("/", tournamentHandler.ListTournaments)
+
+		r.Route("/{id}", func(r chi.Router) {
+			r.Get("/", tournamentHandler.GetTournament)
+			r.Post("/levels", levelHandler.AddLevel)
+			r.Get("/levels", levelHandler.ListLevels)
+			r.Post("/start", timerHandler.StartTournament)
+			r.Post("/pause", timerHandler.PauseTournament)
+			r.Post("/resume", timerHandler.ResumeTournament)
+			r.Post("/next", timerHandler.NextLevel)
+		})
 	})
 
 	return r
