@@ -6,6 +6,7 @@ import (
 
 	"backend/internal/auth"
 	"backend/internal/service"
+	"backend/internal/validation"
 )
 
 type AuthHandler struct {
@@ -26,6 +27,15 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := validation.ValidateEmail(req.Email); err != nil {
+		http.Error(w, "invalid email", http.StatusBadRequest)
+		return
+	}
+	if err := validation.ValidatePassword(req.Password); err != nil {
+		http.Error(w, "invalid password", http.StatusBadRequest)
 		return
 	}
 
@@ -56,6 +66,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := validation.ValidateEmail(req.Email); err != nil {
+		http.Error(w, "invalid email", http.StatusBadRequest)
 		return
 	}
 

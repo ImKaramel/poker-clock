@@ -26,8 +26,8 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 	}
 
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO users (id, email, password) VALUES ($1, $2, $3)`,
-		user.ID, user.Email, user.Password,
+		`INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)`,
+		user.ID, user.Email, user.PasswordHash,
 	)
 	if err != nil {
 		return err
@@ -39,9 +39,9 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
 	var u domain.User
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, email, password FROM users WHERE email = $1`,
+		`SELECT id, email, password_hash FROM users WHERE email = $1`,
 		email,
-	).Scan(&u.ID, &u.Email, &u.Password)
+	).Scan(&u.ID, &u.Email, &u.PasswordHash)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
