@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -9,6 +10,7 @@ import (
 	"backend/internal/api/dto"
 	"backend/internal/domain"
 	"backend/internal/service"
+	"backend/internal/validation"
 )
 
 type LevelHandler struct {
@@ -34,15 +36,28 @@ func (h *LevelHandler) AddLevel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := validation.ValidateBlinds(req.SmallBlind, req.BigBlind); err != nil {
+		http.Error(w, "invalid blinds", http.StatusBadRequest)
+		return
+	}
+	if err := validation.ValidateDurationMinutes(req.DurationMinutes); err != nil {
+		http.Error(w, "invalid duration_minutes", http.StatusBadRequest)
+		return
+	}
+
 	level := domain.Level{
 		SmallBlind:      req.SmallBlind,
 		BigBlind:        req.BigBlind,
 		DurationMinutes: req.DurationMinutes,
 	}
 
-	t, err := h.tournamentService.AddLevel(id, level)
+	t, err := h.tournamentService.AddLevel(r.Context(), id, level)
 	if err != nil {
-		http.Error(w, "tournament not found", http.StatusNotFound)
+		if errors.Is(err, service.ErrTournamentNotFound) {
+			http.Error(w, "tournament not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "could not add level", http.StatusInternalServerError)
 		return
 	}
 
@@ -58,9 +73,13 @@ func (h *LevelHandler) ListLevels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	levels, err := h.tournamentService.ListLevels(id)
+	levels, err := h.tournamentService.ListLevels(r.Context(), id)
 	if err != nil {
-		http.Error(w, "tournament not found", http.StatusNotFound)
+		if errors.Is(err, service.ErrTournamentNotFound) {
+			http.Error(w, "tournament not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "could not list levels", http.StatusInternalServerError)
 		return
 	}
 
