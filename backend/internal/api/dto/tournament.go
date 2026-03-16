@@ -11,12 +11,10 @@ type LevelResponse struct {
 }
 
 type TournamentResponse struct {
-	ID                string          `json:"id"`
-	Name              string          `json:"name"`
-	OwnerID           string          `json:"owner_id"`
-	CurrentLevelIndex int             `json:"current_level_index"`
-	State             string          `json:"state"`
-	Levels            []LevelResponse `json:"levels"`
+	ID      string          `json:"id"`
+	Name    string          `json:"name"`
+	OwnerID string          `json:"owner_id"`
+	Levels  []LevelResponse `json:"levels"`
 }
 
 func ToLevelResponse(l domain.Level) LevelResponse {
@@ -36,11 +34,9 @@ func ToTournamentResponse(t domain.Tournament) TournamentResponse {
 	}
 
 	return TournamentResponse{
-		ID:                t.ID,
-		Name:              t.Name,
-		OwnerID:           t.OwnerID,
-		CurrentLevelIndex: t.CurrentLevelIndex,
-		State:             t.State,
-		Levels:            levels,
+		ID:      t.ID,
+		Name:    t.Name,
+		OwnerID: t.OwnerID,
+		Levels:  levels,
 	}
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -9,6 +10,7 @@ import (
 	"backend/internal/api/dto"
 	"backend/internal/auth"
 	"backend/internal/service"
+	"backend/internal/validation"
 )
 
 type TournamentHandler struct {
@@ -45,7 +47,12 @@ func (h *TournamentHandler) CreateTournament(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	t, err := h.tournamentService.CreateTournament(req.Name, userID)
+	if err := validation.ValidateTournamentName(req.Name); err != nil {
+		http.Error(w, "invalid tournament name", http.StatusBadRequest)
+		return
+	}
+
+	t, err := h.tournamentService.CreateTournament(r.Context(), req.Name, userID)
 	if err != nil {
 		http.Error(w, "could not create tournament", http.StatusInternalServerError)
 		return
@@ -57,7 +64,7 @@ func (h *TournamentHandler) CreateTournament(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *TournamentHandler) ListTournaments(w http.ResponseWriter, r *http.Request) {
-	ts, err := h.tournamentService.ListTournaments()
+	ts, err := h.tournamentService.ListTournaments(r.Context())
 	if err != nil {
 		http.Error(w, "could not list tournaments", http.StatusInternalServerError)
 		return
@@ -78,9 +85,13 @@ func (h *TournamentHandler) GetTournament(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	t, err := h.tournamentService.GetTournament(id)
+	t, err := h.tournamentService.GetTournament(r.Context(), id)
 	if err != nil {
-		http.Error(w, "tournament not found", http.StatusNotFound)
+		if errors.Is(err, service.ErrTournamentNotFound) {
+			http.Error(w, "tournament not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "could not get tournament", http.StatusInternalServerError)
 		return
 	}
 

@@ -9,9 +9,7 @@ import (
 )
 
 var (
-	ErrTournamentNotFound   = errors.New("tournament not found")
-	ErrTournamentNotRunning = errors.New("tournament is not running")
-	ErrTournamentNotPaused  = errors.New("tournament is not paused")
+	ErrTournamentNotFound = errors.New("tournament not found")
 )
 
 type TournamentService struct {
@@ -24,11 +22,9 @@ func NewTournamentService(repo repository.TournamentRepository) *TournamentServi
 
 func (s *TournamentService) CreateTournament(ctx context.Context, name, ownerID string) (domain.Tournament, error) {
 	t := &domain.Tournament{
-		Name:              name,
-		OwnerID:           ownerID,
-		Levels:            nil,
-		CurrentLevelIndex: -1,
-		State:             domain.TournamentStateStopped,
+		Name:    name,
+		OwnerID: ownerID,
+		Levels:  nil,
 	}
 	if err := s.repo.Create(ctx, t); err != nil {
 		return domain.Tournament{}, err
@@ -84,94 +80,17 @@ func (s *TournamentService) ListLevels(ctx context.Context, tournamentID string)
 }
 
 func (s *TournamentService) StartTournament(ctx context.Context, tournamentID string) (domain.Tournament, error) {
-	t, err := s.repo.Get(ctx, tournamentID)
-	if err != nil {
-		return domain.Tournament{}, err
-	}
-	if t == nil {
-		return domain.Tournament{}, ErrTournamentNotFound
-	}
-
-	if err := s.repo.UpdateCurrentLevelIndex(ctx, tournamentID, 0); err != nil {
-		return domain.Tournament{}, err
-	}
-	if err := s.repo.UpdateState(ctx, tournamentID, domain.TournamentStateRunning); err != nil {
-		return domain.Tournament{}, err
-	}
-
-	t.CurrentLevelIndex = 0
-	t.State = domain.TournamentStateRunning
-	return *t, nil
+	return domain.Tournament{}, errors.New("StartTournament is now handled by TimerService")
 }
 
 func (s *TournamentService) PauseTournament(ctx context.Context, tournamentID string) (domain.Tournament, error) {
-	t, err := s.repo.Get(ctx, tournamentID)
-	if err != nil {
-		return domain.Tournament{}, err
-	}
-	if t == nil {
-		return domain.Tournament{}, ErrTournamentNotFound
-	}
-
-	if t.State != domain.TournamentStateRunning {
-		return domain.Tournament{}, ErrTournamentNotRunning
-	}
-
-	if err := s.repo.UpdateState(ctx, tournamentID, domain.TournamentStatePaused); err != nil {
-		return domain.Tournament{}, err
-	}
-
-	t.State = domain.TournamentStatePaused
-	return *t, nil
+	return domain.Tournament{}, errors.New("PauseTournament is now handled by TimerService")
 }
 
 func (s *TournamentService) ResumeTournament(ctx context.Context, tournamentID string) (domain.Tournament, error) {
-	t, err := s.repo.Get(ctx, tournamentID)
-	if err != nil {
-		return domain.Tournament{}, err
-	}
-	if t == nil {
-		return domain.Tournament{}, ErrTournamentNotFound
-	}
-
-	if t.State != domain.TournamentStatePaused {
-		return domain.Tournament{}, ErrTournamentNotPaused
-	}
-
-	if err := s.repo.UpdateState(ctx, tournamentID, domain.TournamentStateRunning); err != nil {
-		return domain.Tournament{}, err
-	}
-
-	t.State = domain.TournamentStateRunning
-	return *t, nil
+	return domain.Tournament{}, errors.New("ResumeTournament is now handled by TimerService")
 }
 
 func (s *TournamentService) NextLevel(ctx context.Context, tournamentID string) (domain.Tournament, error) {
-	t, err := s.repo.Get(ctx, tournamentID)
-	if err != nil {
-		return domain.Tournament{}, err
-	}
-	if t == nil {
-		return domain.Tournament{}, ErrTournamentNotFound
-	}
-
-	if len(t.Levels) == 0 {
-		t.State = domain.TournamentStateStopped
-		_ = s.repo.UpdateState(ctx, tournamentID, domain.TournamentStateStopped)
-		return *t, nil
-	}
-
-	if t.CurrentLevelIndex+1 >= len(t.Levels) {
-		t.State = domain.TournamentStateStopped
-		_ = s.repo.UpdateState(ctx, tournamentID, domain.TournamentStateStopped)
-		return *t, nil
-	}
-
-	nextIndex := t.CurrentLevelIndex + 1
-	if err := s.repo.UpdateCurrentLevelIndex(ctx, tournamentID, nextIndex); err != nil {
-		return domain.Tournament{}, err
-	}
-
-	t.CurrentLevelIndex = nextIndex
-	return *t, nil
+	return domain.Tournament{}, errors.New("NextLevel is now handled by TimerService")
 }
