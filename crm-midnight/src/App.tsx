@@ -3,13 +3,11 @@ import { Routes, Route, HashRouter, Navigate } from "react-router-dom";
 import styled from "styled-components";
 import { useTelegram } from "./hooks/useTelegram";
 import { authAPI } from "./utils/api";
-
-import Layout from "./components/Layout";
 import Schedule from "./pages/Tournaments/Schedule";
 import About from "./pages/About/About";
-import StartPage from "./pages/StartPage/WelcomePage";
-import RatingPage from "./pages/StartPage/RatingPage";
-import CurrentTournament from "./pages/Tournaments/CurrentTournament";
+// import StartPage from "./pages/StartPage/WelcomePage";
+// import RatingPage from "./pages/StartPage/RatingPage";
+// import CurrentTournament from "./pages/Tournaments/CurrentTournament";
 import Rating from "./pages/Rating/Rating";
 import Profile from "./pages/Profile/Profile";
 import Main from "./pages/Main/Main";
@@ -65,7 +63,7 @@ const App: React.FC = () => {
             } catch (e) {
               console.warn("localStorage error:", e);
             }
-          }, 300); 
+          }, 300);
           setLoading(false);
           return;
         }
@@ -119,20 +117,19 @@ const App: React.FC = () => {
 
   return (
     <HashRouter>
-  <>
-    <Routes>
-      <Route path="/" element={<Main />} />
-      <Route path="/rating" element={<Rating />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/tournaments" element={<Schedule />} />
-      <Route path="/support" element={<Support />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-
-    <Menu /> {/* 🔥 отдельно */}
-  </>
-</HashRouter>
+      <>
+        <Routes>
+          <Route path="/" element={<Main />} />
+          <Route path="/rating" element={<Rating />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/tournaments" element={<Schedule />} />
+          <Route path="/support" element={<Support />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        <Menu />
+      </>
+    </HashRouter>
   );
 };
 
