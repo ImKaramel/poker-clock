@@ -47,7 +47,7 @@ export default function Profile() {
     <ProfileContainer>
       <ProfileInfoContainer>
         <AvatarContainer>
-          <img src={User.avatar} style={{ width: "auto" }} />
+          <img src={User.avatar} style={{ width: "auto" }} alt="avatar"/>
           <Overlay />
           <InfoWrapper>
             <InfoTitle>{User.nickname}</InfoTitle>
@@ -101,7 +101,7 @@ export default function Profile() {
             <TimeTitle>19:00</TimeTitle>
           </TimeContainer>
         </InfoCardContainer>
-        <img src={butterfly}/>
+        <img src={butterfly} alt="img"/>
       </TournamentCardContainer>
     </ProfileContainer>
   );

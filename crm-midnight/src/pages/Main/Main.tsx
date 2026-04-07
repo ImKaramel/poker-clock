@@ -40,6 +40,7 @@ export default function Main() {
         <img
           src={current_tournament}
           style={{ height: "100%", width: "100%", objectFit: "contain" }}
+          alt="current_tournament"
         />
         <RegisterButton
           style={{
@@ -70,6 +71,7 @@ export default function Main() {
           <img
             src={User.avatar}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            alt="avatar"
           />
         </MainAvatarContainer>
         <InfoWrapper

@@ -42,7 +42,7 @@ export default function Schedule() {
             <TimeTitle>19:00</TimeTitle>
           </TimeContainer>
         </InfoCardContainer>
-        <img src={butterfly}/>
+        <img src={butterfly} alt="img"/>
       </TournamentCardContainer>
     </TournamentsContainer>
   );
