@@ -24,7 +24,7 @@ import { calcWidth, User } from "../Profile/Profile";
 import RatingTable, { rows } from "../Rating/RatingTable";
 import { ReactComponent as LogoVector } from "../../assets/logo_vector.svg";
 import { useNavigate } from "react-router";
-import { profileAPI } from "@/utils/api";
+import { profileAPI } from "../../utils/api";
 
 const RatingEpxl = 500;
 const currentUser = rows[10];
