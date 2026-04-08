@@ -46,9 +46,22 @@ export const authAPI = {
       }
       
       return response;
-    } catch (error) {
-      console.error('❌ Auth error:', error );
-      throw error;
+    } catch (error: any) {
+      // Axios ошибка
+      if (error.response) {
+        // Сервер ответил с ошибкой (HTTP 4xx или 5xx)
+        console.error('❌ Server responded with status:', error.response.status);
+        console.error('❌ Response data:', error.response.data);
+        console.error('❌ Response headers:', error.response.headers);
+      } else if (error.request) {
+        // Запрос ушёл, но сервер не ответил
+        console.error('❌ No response received:', error.request);
+      } else {
+        // Что-то пошло не так при настройке запроса
+        console.error('❌ Request setup error:', error.message);
+      }
+
+      throw error; // дальше можно пробросить ошибку
     }
   },
 };
