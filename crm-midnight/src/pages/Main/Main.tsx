@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   AboutContainer,
   MainAvatarContainer,
@@ -24,6 +24,7 @@ import { calcWidth, User } from "../Profile/Profile";
 import RatingTable, { rows } from "../Rating/RatingTable";
 import { ReactComponent as LogoVector } from "../../assets/logo_vector.svg";
 import { useNavigate } from "react-router";
+import { profileAPI } from "@/utils/api";
 
 const RatingEpxl = 500;
 const currentUser = rows[10];
@@ -33,6 +34,19 @@ if (!visibleRows.some((r) => r.id === currentUser.id)) {
 }
 
 export default function Main() {
+  const [error, setError] = useState('')
+  useEffect(() => {
+    const getProfile = async () => {
+      try{
+        const response = await profileAPI.getProfile();
+        console.log(response)
+      }
+      catch(err: any){
+        setError(err)
+      }
+    }
+    getProfile()
+  });
   const navigate = useNavigate();
   return (
     <MainContainer>
@@ -120,7 +134,10 @@ export default function Main() {
           <MainHelpTitle>О клубе</MainHelpTitle>
           <LogoVector />
         </MainHelpContainer>
-        <MainHelpContainer style={{ display: "flex", alignItems: "end" }} onClick={() => navigate("/support")}>
+        <MainHelpContainer
+          style={{ display: "flex", alignItems: "end" }}
+          onClick={() => navigate("/support")}
+        >
           <MainHelpTitle>Поддержка</MainHelpTitle>
           <MainHelpSubtitle>
             Поможем с записью, оплатой и любыми вопросами по клубу
