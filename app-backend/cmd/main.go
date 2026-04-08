@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/gin-contrib/cors"
 	httpdelivery "github.com/pridecrm/app-backend/internal/api/http"
 	"github.com/pridecrm/app-backend/internal/infrastructure/auth"
 	"github.com/pridecrm/app-backend/internal/infrastructure/db"
@@ -79,8 +80,32 @@ func main() {
 	h.Repo.Tournaments = trepo
 
 	engine := gin.New()
+
 	engine.Use(gin.Recovery())
 	engine.Use(httpdelivery.RequestLogger(log))
+
+	engine.Use(cors.New(cors.Config{
+		AllowOriginFunc: func(origin string) bool {
+			return true // для Telegram WebApp
+		},
+		AllowOrigins: []string{
+			"https://poker-clock-nine.vercel.app",
+			"http://localhost:3000", // для локалки
+		},
+		AllowMethods: []string{
+			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
+		},
+		AllowHeaders: []string{
+			"Origin", "Content-Type", "Authorization",
+		},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+	engine.RedirectTrailingSlash = false
+	engine.OPTIONS("/*path", func(c *gin.Context) {
+		c.Status(204)
+	})
+
 	httpdelivery.Mount(engine, h, jwtSvc, log)
 
 	srvCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

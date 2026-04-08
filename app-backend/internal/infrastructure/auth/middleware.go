@@ -31,16 +31,23 @@ func IsAdminFromContext(c *gin.Context) bool {
 
 func MiddlewareJWT(j *JWTService, log *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if c.Request.Method == http.MethodOptions {
+			c.Next()
+			return
+		}
+
 		h := c.GetHeader("Authorization")
 		if h == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 			return
 		}
+
 		const p = "Bearer "
 		if !strings.HasPrefix(h, p) {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header"})
 			return
 		}
+
 		raw := strings.TrimSpace(strings.TrimPrefix(h, p))
 		claims, err := j.Parse(raw)
 		if err != nil {
@@ -48,6 +55,7 @@ func MiddlewareJWT(j *JWTService, log *slog.Logger) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
+
 		c.Set(ctxUserID, claims.UserID)
 		c.Set(ctxIsAdmin, claims.IsAdmin)
 		c.Next()

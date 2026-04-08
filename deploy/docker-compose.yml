@@ -33,12 +33,25 @@ services:
     ports:
       - "8080:8080"
 
+  telegram-bot:
+    build:
+      context: ../telegram-bot
+    container_name: telegram-bot
+    restart: always
+    environment:
+     TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+     API_BASE_URL: http://app-backend:8080/api
+     MINI_APP_URL: ${MINI_APP_URL}
+    depends_on:
+      - app-backend
+
   caddy:
     image: caddy:latest
     container_name: caddy
     restart: always
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
     depends_on:
@@ -94,3 +107,5 @@ volumes:
 #
 #volumes:
 #  db_data:
+
+ # scp -f /Users/assistentka_professora/Desktop/poker-clock/telegram-bot root@85.239.63.25:/backend
