@@ -20,12 +20,12 @@ import {
   RatingSubtitle,
 } from "../Profile/styles";
 import FlashOnIcon from "@mui/icons-material/FlashOn";
-import { calcWidth, User } from "../Profile/Profile";
 import RatingTable, { rows } from "../Rating/RatingTable";
 import { ReactComponent as LogoVector } from "../../assets/logo_vector.svg";
 import { useNavigate } from "react-router";
 import { profileAPI } from "../../utils/api";
-import { Profile } from "../../types";
+import { ProfileType } from "../../types";
+import { User } from "../Profile/Profile";
 
 const RatingEpxl = 500;
 const currentUser = rows[10];
@@ -36,7 +36,7 @@ if (!visibleRows.some((r) => r.id === currentUser.id)) {
 
 export default function Main() {
   const [error, setError] = useState('')
-  const [profile, setProfile] = useState<Profile>()
+  const [profile, setProfile] = useState<ProfileType>()
   useEffect(() => {
     const getProfile = async () => {
       try{
@@ -49,6 +49,12 @@ export default function Main() {
     }
     getProfile()
   }, [error]);
+
+  const calcWidth = () => {
+    if (!profile?.user) return 0;
+    return (profile.user.points / RatingEpxl) * 100;
+  };
+
   const navigate = useNavigate();
   return (
     <MainContainer>

@@ -7,14 +7,16 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
-  console.log('🔐 API Request - Token:', token ? 'YES' : 'NO');
+  // const token = localStorage.getItem('auth_token');
+  // console.log('🔐 API Request - Token:', token ? 'YES' : 'NO');
+  const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI0NjMwMjE1NzIiLCJhZG0iOmZhbHNlLCJzdWIiOiI0NjMwMjE1NzIiLCJleHAiOjE3NzYyNzA0MjUsImlhdCI6MTc3NTY2NTYyNX0.aySXrziwsDQnctBKppEfsuSvwYy0Q9AQuTNWEbiv0tU'
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
+// Добавьте обработку 401 ошибок
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -27,34 +29,14 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
-  telegramInitAuth: async (initData: string) => {
+  telegramInitAuth: (initData: string) => {
     console.log("📤 Sending initData:", initData.slice(0, 100) + "...");
-    
-    try {
-      const response = await api.post("/auth/telegram/validate/", { initData });
-      
-      // 🔑 СОХРАНЯЕМ ТОКЕН - сервер возвращает его в поле "token"
-      const token = response.data?.token;
-      
-      if (token) {
-        localStorage.setItem('auth_token', token);
-        console.log('✅ Token saved to localStorage');
-        console.log('📝 Token value:', token.slice(0, 50) + '...');
-      } else {
-        console.error('❌ No token in response! Response data:', response.data);
-      }
-      
-      return response;
-    } catch (error) {
-      console.error('❌ Auth error:', error);
-      throw error;
-    }
+    return api.post("/auth/telegram/validate", { initData });
   },
 };
-
 export const adminAPI = {
-  dashboard: () => {
-    return api.get("/admin/dashboard/")
+   dashboard: () => {
+   return api.get("/admin/dashboard/")
   }
 };
 
@@ -72,7 +54,7 @@ export const ratingAPI = {
 };
 
 export const profileAPI = {
-  getProfile: () => api.get('/profile/'),
+  getProfile: () => api.get('/profile'),
   updateProfile: (data: any) => api.patch('/profile/', data),
 };
 

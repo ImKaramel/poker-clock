@@ -16,18 +16,28 @@ import {
 } from "./styles";
 import FlashOnIcon from "@mui/icons-material/FlashOn";
 import RatingTable, { rows } from "../Rating/RatingTable";
-import { CurrentTab, InfoCardContainer, PastTab, TabContainer, TimeContainer, TimeTitle, TournamentCardContainer, TournamentName } from "../Tournaments/styles";
+import {
+  CurrentTab,
+  InfoCardContainer,
+  PastTab,
+  TabContainer,
+  TimeContainer,
+  TimeTitle,
+  TournamentCardContainer,
+  TournamentName,
+} from "../Tournaments/styles";
 import { Calendar } from "lucide-react";
 import { ReactComponent as Time } from "../../assets/time.svg";
-import butterfly from '../../assets/butterfly_tournament.png'
+import butterfly from "../../assets/butterfly_tournament.png";
+import { useEffect, useState } from "react";
+import { profileAPI } from "../../utils/api";
+import { ProfileType } from "../../types";
 
 const currentUser = rows[10];
 const visibleRows = rows.slice(0, 6);
 if (!visibleRows.some((r) => r.id === currentUser.id)) {
   visibleRows.push(currentUser);
 }
-
-const RatingEpxl = 500;
 
 const generateAvatar = () => {
   return {
@@ -38,19 +48,36 @@ const generateAvatar = () => {
 };
 export const User = generateAvatar();
 
-export const calcWidth = () => {
-  return (User.rating / RatingEpxl) * 100;
-};
+const RatingEpxl = 500;
 
 export default function Profile() {
+  const [error, setError] = useState("");
+  const [profile, setProfile] = useState<ProfileType>();
+  useEffect(() => {
+    const getProfile = async () => {
+      try {
+        const response = await profileAPI.getProfile();
+        setProfile(response.data);
+      } catch (err: any) {
+        setError(err);
+      }
+    };
+    getProfile();
+  }, [error]);
+
+  const calcWidth = () => {
+    if (!profile?.user) return 0;
+    return (profile.user.points / RatingEpxl) * 100;
+  };
+
   return (
     <ProfileContainer>
       <ProfileInfoContainer>
         <AvatarContainer>
-          <img src={User.avatar} style={{ width: "auto" }} alt="avatar"/>
+          <img src={User.avatar} style={{ width: "auto" }} alt="avatar" />
           <Overlay />
           <InfoWrapper>
-            <InfoTitle>{User.nickname}</InfoTitle>
+            <InfoTitle>{profile?.user.first_name}</InfoTitle>
             <LineContainer>
               <ProgressBar style={{ width: `${calcWidth()}%` }} />
             </LineContainer>
@@ -62,7 +89,7 @@ export default function Profile() {
               }}
             >
               <RatingSubtitle>
-                Рейтинг {User.rating}
+                Рейтинг {profile?.user.points}
                 <FlashOnIcon sx={{ color: "gold", fontSize: "1rem" }} />
               </RatingSubtitle>
               <RatingSubtitle>
@@ -79,7 +106,7 @@ export default function Profile() {
       <GameHistoryContainer>
         <GameHistoryWrapper>
           <GameHistoryTitle>История игр</GameHistoryTitle>
-          <TabContainer style={{position: 'inherit'}}>
+          <TabContainer style={{ position: "inherit" }}>
             <CurrentTab>Активные</CurrentTab>
             <PastTab>Прошедшие</PastTab>
           </TabContainer>
@@ -89,19 +116,33 @@ export default function Profile() {
         <InfoCardContainer>
           <TournamentName>Butterfly Tournament</TournamentName>
           <TimeContainer>
-            <div style={{ width: "12px", height: "12px", display: 'flex', alignItems: 'center' }}>
+            <div
+              style={{
+                width: "12px",
+                height: "12px",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               <Calendar />
             </div>
             <TimeTitle>5 марта</TimeTitle>
           </TimeContainer>
-          <TimeContainer style={{gridColumn: '2/3'}}>
-            <div style={{ width: "12px", height: "12px", display: 'flex', alignItems: 'center' }}>
+          <TimeContainer style={{ gridColumn: "2/3" }}>
+            <div
+              style={{
+                width: "12px",
+                height: "12px",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               <Time />
             </div>
             <TimeTitle>19:00</TimeTitle>
           </TimeContainer>
         </InfoCardContainer>
-        <img src={butterfly} alt="img"/>
+        <img src={butterfly} alt="img" />
       </TournamentCardContainer>
     </ProfileContainer>
   );

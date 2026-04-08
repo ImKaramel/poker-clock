@@ -1,4 +1,4 @@
-export interface Profile {
+export interface ProfileType {
   upcoming_games: Array<any>,
   user: {
     created_at: string,
