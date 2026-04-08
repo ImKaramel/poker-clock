@@ -33,7 +33,7 @@ export const authAPI = {
     
     try {
       const response = await api.post("/auth/telegram/validate/", { initData });
-      console.log(response)
+      console.log(initData)
       
       // 🔑 СОХРАНЯЕМ ТОКЕН
       const token = response.data?.token || response.data?.access_token;
