@@ -46,7 +46,7 @@ export default function Main() {
       }
     }
     getProfile()
-  });
+  }, [error]);
   const navigate = useNavigate();
   return (
     <MainContainer>
