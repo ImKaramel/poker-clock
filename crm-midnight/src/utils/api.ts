@@ -10,7 +10,7 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token');
   console.log('🔐 API Request - Token:', token ? 'YES' : 'NO');
   if (token) {
-    config.headers.Authorization = `Token ${token}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
