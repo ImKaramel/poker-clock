@@ -1,36 +1,13 @@
-export interface User {
-    user_id: number;
-    username: string;
-    first_name: string;
-    name: string
-    last_name: string;
-    photo?: string;
-    email: string;
-    date_of_birth: string;
-    phone: string;
-    status: boolean;
-    is_admin: boolean;
-    is_banned: boolean;
+export interface Profile {
+  upcoming_games: Array<any>,
+  user: {
+    created_at: string,
+    first_name: string,
+    is_admin: boolean,
+    is_banned: boolean,
+    points: number,
+    total_games_played: number,
+    user_id: string,
+    username: string
   }
-  export interface Tournament {
-    description: string;
-    date: string;
-    location: string;
-    participants: string;
-    status: string;
-    photo_id: string
-  }
-  export interface Player {
-    rank: number;
-    name: string;
-    score: number;
-    isYou?: boolean;
-  }
-
-  export interface Me {
-    id: number;
-    username: string;
-    first_name: string;
-    last_name: string;
-    role: string;
-  }
+}

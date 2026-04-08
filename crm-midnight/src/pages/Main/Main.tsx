@@ -25,6 +25,7 @@ import RatingTable, { rows } from "../Rating/RatingTable";
 import { ReactComponent as LogoVector } from "../../assets/logo_vector.svg";
 import { useNavigate } from "react-router";
 import { profileAPI } from "../../utils/api";
+import { Profile } from "../../types";
 
 const RatingEpxl = 500;
 const currentUser = rows[10];
@@ -35,11 +36,12 @@ if (!visibleRows.some((r) => r.id === currentUser.id)) {
 
 export default function Main() {
   const [error, setError] = useState('')
+  const [profile, setProfile] = useState<Profile>()
   useEffect(() => {
     const getProfile = async () => {
       try{
         const response = await profileAPI.getProfile();
-        console.log(response)
+        setProfile(response.data)
       }
       catch(err: any){
         setError(err)
@@ -96,7 +98,7 @@ export default function Main() {
             width: "calc(100%  - 70px)",
           }}
         >
-          <InfoTitle style={{ fontSize: "16px" }}>{User.nickname}</InfoTitle>
+          <InfoTitle style={{ fontSize: "16px" }}>{profile?.user.first_name}</InfoTitle>
           <LineContainer>
             <ProgressBar style={{ width: `${calcWidth()}%` }} />
           </LineContainer>
@@ -108,7 +110,7 @@ export default function Main() {
             }}
           >
             <RatingSubtitle style={{ fontSize: "12px" }}>
-              Рейтинг {User.rating}
+              Рейтинг {profile?.user.points}
               <FlashOnIcon sx={{ color: "gold", fontSize: "1rem" }} />
             </RatingSubtitle>
             <RatingSubtitle style={{ fontSize: "12px" }}>
