@@ -52,6 +52,7 @@ const App: React.FC = () => {
             );
 
           const response = await authAPI.telegramInitAuth(initData);
+          console.log(response)
 
           if (!response.data?.token) {
             throw new Error("No token in API response");
