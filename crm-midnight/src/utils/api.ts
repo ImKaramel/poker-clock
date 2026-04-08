@@ -28,9 +28,27 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
-  telegramInitAuth: (initData: string) => {
+  telegramInitAuth: async (initData: string) => {
     console.log("📤 Sending initData:", initData.slice(0, 100) + "...");
-    return api.post("/auth/telegram/validate/", { initData });
+    
+    try {
+      const response = await api.post("/auth/telegram/validate/", { initData });
+      
+      // 🔑 СОХРАНЯЕМ ТОКЕН
+      const token = response.data?.token || response.data?.access_token;
+      
+      if (token) {
+        localStorage.setItem('auth_token', token);
+        console.log('✅ Token saved to localStorage');
+      } else {
+        console.warn('⚠️ No token in response:', response.data);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Auth error:', error);
+      throw error;
+    }
   },
 };
 export const adminAPI = {
