@@ -33,7 +33,6 @@ export const authAPI = {
     
     try {
       const response = await api.post("/auth/telegram/validate/", { initData });
-      console.log(initData)
       
       // 🔑 СОХРАНЯЕМ ТОКЕН
       const token = response.data?.token || response.data?.access_token;
@@ -47,6 +46,7 @@ export const authAPI = {
       
       return response;
     } catch (error: any) {
+      console.log(initData)
       // Axios ошибка
       if (error.response) {
         // Сервер ответил с ошибкой (HTTP 4xx или 5xx)
