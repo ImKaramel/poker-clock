@@ -15,7 +15,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Добавьте обработку 401 ошибок
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -34,40 +33,28 @@ export const authAPI = {
     try {
       const response = await api.post("/auth/telegram/validate/", { initData });
       
-      // 🔑 СОХРАНЯЕМ ТОКЕН
-      const token = response.data?.token || response.data?.access_token;
+      // 🔑 СОХРАНЯЕМ ТОКЕН - сервер возвращает его в поле "token"
+      const token = response.data?.token;
       
       if (token) {
         localStorage.setItem('auth_token', token);
         console.log('✅ Token saved to localStorage');
+        console.log('📝 Token value:', token.slice(0, 50) + '...');
       } else {
-        console.warn('⚠️ No token in response:', response.data);
+        console.error('❌ No token in response! Response data:', response.data);
       }
       
       return response;
-    } catch (error: any) {
-      console.log(initData)
-      // Axios ошибка
-      if (error.response) {
-        // Сервер ответил с ошибкой (HTTP 4xx или 5xx)
-        console.error('❌ Server responded with status:', error.response.status);
-        console.error('❌ Response data:', error.response.data);
-        console.error('❌ Response headers:', error.response.headers);
-      } else if (error.request) {
-        // Запрос ушёл, но сервер не ответил
-        console.error('❌ No response received:', error.request);
-      } else {
-        // Что-то пошло не так при настройке запроса
-        console.error('❌ Request setup error:', error.message);
-      }
-
-      throw error; // дальше можно пробросить ошибку
+    } catch (error) {
+      console.error('❌ Auth error:', error);
+      throw error;
     }
   },
 };
+
 export const adminAPI = {
-   dashboard: () => {
-   return api.get("/admin/dashboard/")
+  dashboard: () => {
+    return api.get("/admin/dashboard/")
   }
 };
 
