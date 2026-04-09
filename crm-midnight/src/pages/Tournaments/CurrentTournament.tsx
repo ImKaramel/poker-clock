@@ -94,6 +94,7 @@ export default function CurrentTournament() {
         <img
           src={current_tournament}
           style={{ height: "100%", width: "100%", objectFit: "contain" }}
+          alt="Выбранный турнир"
         />
         <InfoChip
           label={formatTime(game?.time || game?.time || "")}
