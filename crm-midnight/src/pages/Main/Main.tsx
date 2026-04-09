@@ -35,9 +35,11 @@ if (!visibleRows.some((r) => r.id === currentUser.id)) {
 }
 
 export default function Main() {
-  const [_error, setError] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [error, setError] = useState("");
   const [profile, setProfile] = useState<ProfileType>();
-  const [_games, setGames] = useState<GameType[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [games, setGames] = useState<GameType[]>([]);
   const [nearestGame, setNearestGame] = useState<GameType | null>(null);
 
   useEffect(() => {

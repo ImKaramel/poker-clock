@@ -72,14 +72,16 @@ export default function CurrentTournament() {
     if (!id) return;
     if (!registered) {
       try {
-        const _response = await gamesAPI.registerForGame(parseInt(id));
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const response = await gamesAPI.registerForGame(parseInt(id));
         setRegistered(true);
       } catch (err: any) {
         setError(err);
       }
     } else {
       try {
-        const _response = await gamesAPI.discardRegisterForGame(parseInt(id));
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const response = await gamesAPI.discardRegisterForGame(parseInt(id));
         setRegistered(false);
       } catch (err: any) {
         setError(err);
