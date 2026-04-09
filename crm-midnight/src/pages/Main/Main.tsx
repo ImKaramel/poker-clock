@@ -35,9 +35,9 @@ if (!visibleRows.some((r) => r.id === currentUser.id)) {
 }
 
 export default function Main() {
-  const [error, setError] = useState("");
+  const [_error, setError] = useState("");
   const [profile, setProfile] = useState<ProfileType>();
-  const [games, setGames] = useState<GameType[]>([]);
+  const [_games, setGames] = useState<GameType[]>([]);
   const [nearestGame, setNearestGame] = useState<GameType | null>(null);
 
   useEffect(() => {

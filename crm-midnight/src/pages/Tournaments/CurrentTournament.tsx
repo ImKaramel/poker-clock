@@ -72,14 +72,14 @@ export default function CurrentTournament() {
     if (!id) return;
     if (!registered) {
       try {
-        const response = await gamesAPI.registerForGame(parseInt(id));
+        const _response = await gamesAPI.registerForGame(parseInt(id));
         setRegistered(true);
       } catch (err: any) {
         setError(err);
       }
     } else {
       try {
-        const response = await gamesAPI.discardRegisterForGame(parseInt(id));
+        const _response = await gamesAPI.discardRegisterForGame(parseInt(id));
         setRegistered(false);
       } catch (err: any) {
         setError(err);
