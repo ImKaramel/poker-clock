@@ -56,6 +56,12 @@ func MiddlewareJWT(j *JWTService, log *slog.Logger) gin.HandlerFunc {
 			return
 		}
 
+		log.Info("jwt claims",
+			"user_id", claims.UserID,
+			"is_admin", claims.IsAdmin,
+			"path", c.FullPath(),
+		)
+
 		c.Set(ctxUserID, claims.UserID)
 		c.Set(ctxIsAdmin, claims.IsAdmin)
 		c.Next()

@@ -1,8 +1,9 @@
 package httpapi
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type telegramBody struct {
@@ -21,6 +22,7 @@ func (h *Handlers) TelegramAuth(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
 		return
 	}
+	//photoURL, _ := telegramData["photo_url"].(string)
 	c.JSON(http.StatusOK, gin.H{
 		"token":  token,
 		"user":   userToMap(u),
@@ -44,6 +46,7 @@ func (h *Handlers) TelegramValidate(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Auth failed: " + err.Error()})
 		return
 	}
+	h.Log.Info("TOKEN GENERATED", "token", token, "user", u.UserID)
 	c.JSON(http.StatusOK, gin.H{
 		"token": token,
 		"user": gin.H{

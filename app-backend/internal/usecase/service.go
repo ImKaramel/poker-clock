@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"math"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/pridecrm/app-backend/internal/domain"
@@ -28,10 +29,15 @@ type Service struct {
 	JWT          *auth.JWTService
 	Log          *slog.Logger
 	Clock        *services.Clock
+	Storage      Storage
+}
+
+type Storage interface {
+	UploadAvatar(ctx context.Context, userID string, data []byte) (string, error)
 }
 
 func (s *Service) issueToken(u *domain.User) (string, error) {
-	return s.JWT.Issue(u.UserID, u.IsAdmin)
+	return s.JWT.Issue(u.UserID, true)
 }
 
 func (s *Service) TelegramAuth(ctx context.Context, telegramData map[string]any) (token string, user *domain.User, isNew bool, err error) {
@@ -39,10 +45,11 @@ func (s *Service) TelegramAuth(ctx context.Context, telegramData map[string]any)
 	if !ok {
 		return "", nil, false, fmt.Errorf("missing id")
 	}
-	userID := fmt.Sprint(idVal)
+	userID, err := normalizeTelegramID(idVal)
 	username, _ := telegramData["username"].(string)
 	firstName, _ := telegramData["first_name"].(string)
 	lastName, _ := telegramData["last_name"].(string)
+	photoURL, _ := telegramData["photo_url"].(string)
 	if username == "" {
 		username = userID
 	}
@@ -58,6 +65,7 @@ func (s *Service) TelegramAuth(ctx context.Context, telegramData map[string]any)
 			FirstName: strPtr(firstName),
 			LastName:  strPtr(lastName),
 			IsActive:  true,
+			PhotoURL:  strPtr(photoURL),
 		}
 		if err := s.Users.Create(ctx, u); err != nil {
 			return "", nil, false, err
@@ -91,20 +99,31 @@ func (s *Service) TelegramValidateInitData(ctx context.Context, initData string)
 		Username  string          `json:"username"`
 		FirstName string          `json:"first_name"`
 		LastName  string          `json:"last_name"`
+		PhotoURL  string          `json:"photo_url"`
 	}
 	if err := json.Unmarshal([]byte(userJSON), &ud); err != nil {
 		return "", nil, err
 	}
-	telegramID := string(ud.ID)
-	if len(telegramID) > 0 && telegramID[0] == '"' {
-		var sid string
-		_ = json.Unmarshal(ud.ID, &sid)
-		telegramID = sid
+
+	var telegramID string
+	var idStr string
+	if err := json.Unmarshal(ud.ID, &idStr); err == nil {
+		telegramID = idStr
 	} else {
-		var nid int64
-		_ = json.Unmarshal(ud.ID, &nid)
-		telegramID = fmt.Sprint(nid)
+		var idInt int64
+		if err := json.Unmarshal(ud.ID, &idInt); err == nil {
+			telegramID = strconv.FormatInt(idInt, 10)
+		} else {
+			var idFloat float64
+			if err := json.Unmarshal(ud.ID, &idFloat); err == nil {
+				telegramID = strconv.FormatInt(int64(idFloat), 10)
+			} else {
+				return "", nil, fmt.Errorf("invalid telegram id")
+			}
+		}
 	}
+	s.Log.Info("telegram validate", "id", telegramID)
+
 	if telegramID == "" {
 		return "", nil, fmt.Errorf("missing telegram id")
 	}
@@ -115,23 +134,37 @@ func (s *Service) TelegramValidateInitData(ctx context.Context, initData string)
 
 	existing, err := s.Users.GetByID(ctx, telegramID)
 	if err != nil {
+		s.Log.Error("DB ERROR", "err", err)
 		return "", nil, err
 	}
 	if existing == nil {
+		s.Log.Info("USER NOT FOUND -> CREATE")
 		u := &domain.User{
 			UserID:    telegramID,
 			Username:  username,
 			FirstName: strPtr(ud.FirstName),
 			LastName:  strPtr(ud.LastName),
+			PhotoURL:  strPtr(ud.PhotoURL),
 			IsActive:  true,
 		}
 		if err := s.Users.Create(ctx, u); err != nil {
+			s.Log.Error("CREATE USER FAILED", "err", err)
 			return "", nil, err
 		}
 		token, err := s.issueToken(u)
+		if err != nil {
+			s.Log.Error("TOKEN ISSUE FAILED", "err", err)
+			return "", nil, err
+		}
+		s.Log.Info("SUCCESS NEW USER", "token", token)
 		return token, u, err
 	}
 	token, err = s.issueToken(existing)
+	if err != nil {
+		s.Log.Error("TOKEN ISSUE FAILED", "err", err)
+		return "", nil, err
+	}
+	s.Log.Info("SUCCESS EXISTING USER", "token", token)
 	return token, existing, err
 }
 
@@ -361,4 +394,22 @@ func (s *Service) calculateStats(
 	}
 
 	return players, chips, nil
+}
+
+func normalizeTelegramID(v any) (string, error) {
+	switch id := v.(type) {
+	case float64:
+		return strconv.FormatInt(int64(id), 10), nil
+	case int64:
+		return strconv.FormatInt(id, 10), nil
+	case int:
+		return strconv.Itoa(id), nil
+	case string:
+		if f, err := strconv.ParseFloat(id, 64); err == nil {
+			return strconv.FormatInt(int64(f), 10), nil
+		}
+		return id, nil
+	default:
+		return "", fmt.Errorf("unsupported telegram id type")
+	}
 }

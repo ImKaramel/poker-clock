@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE users ADD COLUMN photo_url TEXT;
+
 CREATE TABLE IF NOT EXISTS games (
     game_id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
@@ -39,6 +41,7 @@ CREATE TABLE IF NOT EXISTS games (
     points_per_extra_player INT NOT NULL DEFAULT 10,
     min_players_for_extra_points INT NOT NULL DEFAULT 10
 );
+ALTER TABLE games ADD COLUMN name VARCHAR(255) NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS participants (
     id BIGSERIAL PRIMARY KEY,

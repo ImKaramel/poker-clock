@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pridecrm/app-backend/internal/infrastructure/storageS3"
 
-	"github.com/gin-contrib/cors"
+	//"github.com/gin-contrib/cors"
 	httpdelivery "github.com/pridecrm/app-backend/internal/api/http"
 	"github.com/pridecrm/app-backend/internal/infrastructure/auth"
 	"github.com/pridecrm/app-backend/internal/infrastructure/db"
@@ -28,6 +29,12 @@ func main() {
 	if dsn == "" {
 		dsn = "postgres://postgres:postgres@localhost:5432/pridecrm?sslmode=disable"
 		log.Info("DATABASE_URL not set, using default local DSN")
+	}
+
+	s3Storage, err := storageS3.New()
+	if err != nil {
+		log.Error("s3 init failed", "err", err)
+		os.Exit(1)
 	}
 	secret := cfg.JWTSecret
 	if secret == "" {
@@ -70,6 +77,7 @@ func main() {
 		JWT:          jwtSvc,
 		Log:          log,
 		Clock:        clock,
+		Storage:      s3Storage,
 	}
 
 	h := &httpdelivery.Handlers{Log: log, UC: uc}
@@ -84,27 +92,38 @@ func main() {
 	engine.Use(gin.Recovery())
 	engine.Use(httpdelivery.RequestLogger(log))
 
-	engine.Use(cors.New(cors.Config{
-		AllowOriginFunc: func(origin string) bool {
-			return true // для Telegram WebApp
-		},
-		AllowOrigins: []string{
-			"https://poker-clock-nine.vercel.app",
-			"http://localhost:3000", // для локалки
-		},
-		AllowMethods: []string{
-			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
-		},
-		AllowHeaders: []string{
-			"Origin", "Content-Type", "Authorization",
-		},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
-	engine.RedirectTrailingSlash = false
-	engine.OPTIONS("/*path", func(c *gin.Context) {
-		c.Status(204)
-	})
+	//engine.Use(cors.New(cors.Config{
+	//
+	//	AllowOrigins: []string{
+	//		"https://poker-clock-nine.vercel.app",
+	//		"https://api.midnight-club.ru",
+	//		"http://localhost:3000",
+	//		"http://localhost:8080",
+	//	},
+	//	AllowMethods: []string{
+	//		"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD",
+	//	},
+	//	AllowHeaders: []string{
+	//		"Origin",
+	//		"Content-Type",
+	//		"Authorization",
+	//		"Accept",
+	//		"X-Requested-With",
+	//	},
+	//	ExposeHeaders: []string{
+	//		"Content-Length",
+	//		"Authorization",
+	//	},
+	//	AllowCredentials: true,
+	//	MaxAge:           12 * time.Hour,
+	//}))
+	engine.RedirectTrailingSlash = true
+	//engine.OPTIONS("/*path", func(c *gin.Context) {
+	//	c.Status(204)
+	//})
+	//engine.GET("/health", func(c *gin.Context) {
+	//	c.JSON(200, gin.H{"status": "ok"})
+	//})
 
 	httpdelivery.Mount(engine, h, jwtSvc, log)
 

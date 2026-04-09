@@ -33,3 +33,5 @@ deploy/.env
 /.idea/vcs.xml
 /.idea/workspace.xml
 /.idea/poker-clock.iml
+/.idea/go.imports.xml
+/.idea/modules.xml

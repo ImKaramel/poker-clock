@@ -82,6 +82,7 @@ func (h *Handlers) GetGame(c *gin.Context) {
 }
 
 type gameMutationBody struct {
+	Name                     string  `json:"name"`
 	Date                     string  `json:"date"`
 	Time                     string  `json:"time"`
 	Description              string  `json:"description"`
@@ -107,6 +108,7 @@ func parseGameBody(body gameMutationBody) (*domain.Game, error) {
 		}
 	}
 	g := &domain.Game{
+		Name:                     body.Name,
 		Date:                     d,
 		Time:                     t,
 		Description:              body.Description,
@@ -167,6 +169,7 @@ func (h *Handlers) UpdateGame(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date/time"})
 		return
 	}
+	g.Name = ng.Name
 	g.Date = ng.Date
 	g.Time = ng.Time
 	g.Description = ng.Description

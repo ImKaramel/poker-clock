@@ -1,10 +1,11 @@
 package httpapi
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/pridecrm/app-backend/internal/domain"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/pridecrm/app-backend/internal/domain"
 )
 
 // --- Users (admin) ---
@@ -57,7 +58,6 @@ func (h *Handlers) GetUser(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, userToMap(u))
 }
-
 func (h *Handlers) UpdateUser(c *gin.Context) {
 	id := c.Param("user_id")
 	u, err := h.Repo.Users.GetByID(c.Request.Context(), id)

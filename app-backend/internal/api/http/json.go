@@ -46,6 +46,7 @@ func gameToMap(g *domain.Game, participantsCount int64, details []map[string]any
 	}
 	m := map[string]any{
 		"game_id":                      g.GameID,
+		"name":                         g.Name,
 		"date":                         g.Date.Format("2006-01-02"),
 		"time":                         g.Time.Format("15:04:05"),
 		"description":                  g.Description,

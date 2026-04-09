@@ -4,6 +4,7 @@ import "time"
 
 type Game struct {
 	GameID                   int64
+	Name                     string
 	Date                     time.Time
 	Time                     time.Time
 	Description              string

@@ -9,7 +9,7 @@ type Participant struct {
 	Entries     int
 	Rebuys      int
 	Addons      int
-	FinalPoints int
+	FinalPoints int //
 	Position    *int
 	JoinedAt    time.Time
 	Arrived     bool

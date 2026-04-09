@@ -22,4 +22,5 @@ type User struct {
 	IsBanned         bool
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	PhotoURL         *string
 }
