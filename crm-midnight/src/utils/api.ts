@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.midnight-club.ru/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.midnight-club-app.ru/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -9,7 +9,7 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token');
   console.log('🔐 API Request - Token:', token ? 'YES' : 'NO');
-  // const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI0NjMwMjE1NzIiLCJhZG0iOmZhbHNlLCJzdWIiOiI0NjMwMjE1NzIiLCJleHAiOjE3NzYyNzA0MjUsImlhdCI6MTc3NTY2NTYyNX0.aySXrziwsDQnctBKppEfsuSvwYy0Q9AQuTNWEbiv0tU'
+  // const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI0LjYzMDIxNTcyZSswOCIsImFkbSI6dHJ1ZSwic3ViIjoiNC42MzAyMTU3MmUrMDgiLCJleHAiOjE3NzYyNzk4MTYsImlhdCI6MTc3NTY3NTAxNn0.123htHIfVkHegEZaBpqYYqcrkqWpo7ubRgpPM7yhkRI'
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -41,12 +41,12 @@ export const adminAPI = {
 };
 
 export const gamesAPI = {
-  getGames: () => api.get('/games/'),
-  getGame: (id: number) => api.get(`/games/${id}/`),
+  getGames: () => api.get('/games'),
+  getGame: (id: number) => api.get(`/games/${id}`),
   registerForGame: (gameId: number) => 
-    api.post('/participants/register/', { game_id: gameId }),
+    api.post('/participants/register', { game_id: gameId }),
   discardRegisterForGame: (gameId: number) => 
-    api.delete('/participants/unregister/', { data: { game_id: gameId } }),
+    api.delete('/participants/unregister', { data: { game_id: gameId } }),
 };
 
 export const ratingAPI = {

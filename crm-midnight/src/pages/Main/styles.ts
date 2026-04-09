@@ -1,4 +1,4 @@
-import { Button } from "@mui/material";
+import { Chip } from "@mui/material";
 import styled from "styled-components";
 
 export const MainContainer = styled.div`
@@ -6,15 +6,17 @@ export const MainContainer = styled.div`
     border-radius: 25px;
     background-color: #000000;
 `
-export const RegisterButton = styled(Button)({
-    width: '138px!important',
+export const InfoChip = styled(Chip)({
+    position: 'absolute',
+    left: '40px',
+    top: '116px',
+    width: '138px',
     height: '35px!important',
     borderRadius: '47px!important',
     padding: '10px 23px!important',
-    backgroundColor: '#FEFEFE!important',
-    color: '#000!important',
+    backgroundColor: 'rgb(36, 37, 40)!important',
+    color: '#fff!important',
     fontSize: '18px!important',
-    fontWeight: '500!important',
 })
 
 export const MainAvatarContainer = styled.div`

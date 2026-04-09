@@ -5,9 +5,7 @@ import { useTelegram } from "./hooks/useTelegram";
 import { authAPI } from "./utils/api";
 import Schedule from "./pages/Tournaments/Schedule";
 import About from "./pages/About/About";
-// import StartPage from "./pages/StartPage/WelcomePage";
-// import RatingPage from "./pages/StartPage/RatingPage";
-// import CurrentTournament from "./pages/Tournaments/CurrentTournament";
+import CurrentTournament from "./pages/Tournaments/CurrentTournament";
 import Rating from "./pages/Rating/Rating";
 import Profile from "./pages/Profile/Profile";
 import Main from "./pages/Main/Main";
@@ -28,7 +26,6 @@ const Loader = styled.div`
 
 const App: React.FC = () => {
   const { initData, isTelegram, isReady } = useTelegram();
-
   const [authError, setAuthError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -97,7 +94,6 @@ const App: React.FC = () => {
       <Loader>
         <h2>❌ Ошибка авторизации</h2>
         <p>{authError}</p>
-
         <button
           onClick={() => window.location.reload()}
           style={{
@@ -124,7 +120,8 @@ const App: React.FC = () => {
           <Route path="/rating" element={<Rating />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/about" element={<About />} />
-          <Route path="/tournaments" element={<Schedule />} />
+          <Route path="/games" element={<Schedule />} />
+          <Route path="/games/:id" element={<CurrentTournament />} />
           <Route path="/support" element={<Support />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import {
   AboutContainer,
+  InfoChip,
   MainAvatarContainer,
   MainContainer,
   MainHelpContainer,
   MainHelpSubtitle,
   MainHelpTitle,
-  RegisterButton,
 } from "./styles";
 import { TitleContainer } from "../Tournaments/styles";
 import current_tournament from "../../assets/current_tournament.jpg";
@@ -22,9 +22,9 @@ import {
 import FlashOnIcon from "@mui/icons-material/FlashOn";
 import RatingTable, { rows } from "../Rating/RatingTable";
 import { ReactComponent as LogoVector } from "../../assets/logo_vector.svg";
-import { useNavigate } from "react-router";
-import { profileAPI } from "../../utils/api";
-import { ProfileType } from "../../types";
+import { useNavigate } from "react-router-dom"; // Убрал useParams, т.к. не используется
+import { gamesAPI, profileAPI } from "../../utils/api";
+import { GameType, ProfileType } from "../../types";
 import { User } from "../Profile/Profile";
 
 const RatingEpxl = 500;
@@ -35,46 +35,133 @@ if (!visibleRows.some((r) => r.id === currentUser.id)) {
 }
 
 export default function Main() {
-  const [error, setError] = useState('')
-  const [profile, setProfile] = useState<ProfileType>()
+  const [error, setError] = useState("");
+  const [profile, setProfile] = useState<ProfileType>();
+  const [games, setGames] = useState<GameType[]>([]);
+  const [nearestGame, setNearestGame] = useState<GameType | null>(null);
+
   useEffect(() => {
     const getProfile = async () => {
-      try{
+      try {
         const response = await profileAPI.getProfile();
-        setProfile(response.data)
+        setProfile(response.data);
+      } catch (err: any) {
+        setError(err);
       }
-      catch(err: any){
-        setError(err)
+    };
+    
+    const getGames = async () => {
+      try {
+        const response = await gamesAPI.getGames();
+        const allGames = response.data;
+        setGames(allGames);
+        
+        if (allGames && allGames.length > 0) {
+          const nearest = findNearestGame(allGames);
+          setNearestGame(nearest);
+        }
+      } catch (err: any) {
+        setError(err);
       }
+    };
+    
+    getProfile();
+    getGames();
+  }, []);
+
+  const formatTime = (timeStr: string) => {
+    if (timeStr && timeStr.includes(':')) {
+      return timeStr.split(':').slice(0, 2).join(':');
     }
-    getProfile()
-  }, [error]);
+    return timeStr || "Время не указано";
+  };
+
+  const formatDate = (dateStr: string) => {
+    const months = [
+      'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+    ];
+    
+    const date = new Date(dateStr);
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    
+    return `${day} ${month}`;
+  };
+  
+  const findNearestGame = (gamesList: GameType[]) => {
+    const now = new Date();
+
+    const parseGameDate = (game: GameType) => {
+      let dateObj: Date;
+      
+      if (game.date && game.time) {
+        dateObj = new Date(`${game.date}T${game.time}`);
+      } else if (game.time) {
+        dateObj = new Date(game.time);
+      } else {
+        dateObj = new Date(game.date);
+      }
+      
+      return dateObj;
+    };
+    
+    const upcomingGames = gamesList.filter(game => {
+      const gameDate = parseGameDate(game);
+      return gameDate >= now;
+    });
+    
+    if (upcomingGames.length === 0) {
+      const sorted = [...gamesList].sort((a, b) => {
+        return parseGameDate(a).getTime() - parseGameDate(b).getTime();
+      });
+      return sorted[0] || null;
+    }
+    
+    const sortedUpcoming = upcomingGames.sort((a, b) => {
+      return parseGameDate(a).getTime() - parseGameDate(b).getTime();
+    });
+    
+    return sortedUpcoming[0];
+  };
 
   const calcWidth = () => {
     if (!profile?.user) return 0;
-    return (profile.user.points / RatingEpxl) * 100;
+    const width = (profile.user.points / RatingEpxl) * 100;
+    return Math.min(width, 100); 
   };
 
   const navigate = useNavigate();
+  
   return (
     <MainContainer>
-      <TitleContainer>
+      <TitleContainer onClick={() => navigate(`/games/${nearestGame?.game_id}`)}>
         <img
           src={current_tournament}
           style={{ height: "100%", width: "100%", objectFit: "contain" }}
           alt="current_tournament"
         />
-        <RegisterButton
-          style={{
-            textTransform: "none",
-            position: "absolute",
-            top: "225px",
-            left: "30px",
-          }}
-        >
-          Записаться
-        </RegisterButton>
+        {nearestGame && (
+          <>
+            <InfoChip
+              label={formatTime(nearestGame.time || nearestGame.time || "")}
+              style={{
+                justifyContent: "flex-start",
+              }}
+            />
+            <InfoChip
+              label={formatDate(nearestGame.date || nearestGame.time || "")}
+              style={{
+                fontWeight: "500!important",
+                top: "151px",
+                width: "193px",
+                justifyContent: "flex-start",
+              }}
+            />
+          </>
+        )}
       </TitleContainer>
+      
       <ProfileInfoContainer
         style={{
           height: "95px",
@@ -101,10 +188,12 @@ export default function Main() {
             position: "inherit",
             height: "55px",
             padding: 0,
-            width: "calc(100%  - 70px)",
+            width: "calc(100% - 70px)",
           }}
         >
-          <InfoTitle style={{ fontSize: "16px" }}>{profile?.user.first_name}</InfoTitle>
+          <InfoTitle style={{ fontSize: "16px" }}>
+            {profile?.user?.first_name || "Игрок"}
+          </InfoTitle>
           <LineContainer>
             <ProgressBar style={{ width: `${calcWidth()}%` }} />
           </LineContainer>
@@ -116,7 +205,7 @@ export default function Main() {
             }}
           >
             <RatingSubtitle style={{ fontSize: "12px" }}>
-              Рейтинг {profile?.user.points}
+              Рейтинг {profile?.user?.points || 0}
               <FlashOnIcon sx={{ color: "gold", fontSize: "1rem" }} />
             </RatingSubtitle>
             <RatingSubtitle style={{ fontSize: "12px" }}>
@@ -126,9 +215,11 @@ export default function Main() {
           </div>
         </InfoWrapper>
       </ProfileInfoContainer>
+      
       <ProfileRating>
         <RatingTable rows={visibleRows} currentUserId={currentUser.id} />
       </ProfileRating>
+      
       <AboutContainer>
         <MainHelpContainer
           style={{
@@ -152,6 +243,7 @@ export default function Main() {
           </MainHelpSubtitle>
         </MainHelpContainer>
       </AboutContainer>
+      
       <ProfileInfoContainer
         style={{
           position: "relative",

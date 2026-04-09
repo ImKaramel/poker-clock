@@ -71,7 +71,7 @@ export const TournamentCardContainer = styled.div`
 `;
 
 export const InfoCardContainer = styled.div`
-  width: 164px;
+  width: 180px;
   height: 39px;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -182,7 +182,7 @@ export const JoinButton = styled.div`
   font-weight: 500;
   color: #000000;
   display: flex;
-  position: fixed;
+  position: absolute;
   bottom: 0;
   align-items: center;
   justify-content: center;

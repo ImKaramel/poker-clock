@@ -10,7 +10,7 @@ const Menu: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const navItems = [
     { path: "/", image: <Main /> },
-    { path: "/tournaments", image: <Tournament /> },
+    { path: "/games", image: <Tournament /> },
     { path: "/rating", image: <Rating /> },
     { path: "/profile", image: <Profile /> }
   ];

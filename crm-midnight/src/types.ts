@@ -11,3 +11,20 @@ export interface ProfileType {
     username: string
   }
 }
+
+export interface GameType {
+  base_points: number,
+  buyin: number,
+  date: string,
+  description: string,
+  game_id: number,
+  is_active: boolean,
+  location: string,
+  min_players_for_extra_points: number,
+  participants_count: number,
+  participants_details: Array<any>,
+  photo: any,
+  points_per_extra_player: number,
+  reentry_buyin: number,
+  time: string
+}
