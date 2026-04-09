@@ -155,7 +155,8 @@ export default function Main() {
 
   const handleTournamentClick = () => {
     if (nearestGame) {
-      navigate(`/tournament/${nearestGame.game_id}`);
+      navigate(`/games/${nearestGame.game_id}`);
+      console.log('ближайшая игра', nearestGame)
     }
   };
 
