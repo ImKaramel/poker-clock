@@ -182,8 +182,6 @@ export const JoinButton = styled.div`
   font-weight: 500;
   color: #000000;
   display: flex;
-  position: absolute;
-  bottom: 0;
   align-items: center;
   justify-content: center;
 `
