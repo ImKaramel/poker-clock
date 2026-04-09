@@ -20,124 +20,150 @@ import {
   RatingSubtitle,
 } from "../Profile/styles";
 import FlashOnIcon from "@mui/icons-material/FlashOn";
-import RatingTable, { rows } from "../Rating/RatingTable";
+import RatingTable from "../Rating/RatingTable";
 import { ReactComponent as LogoVector } from "../../assets/logo_vector.svg";
-import { useNavigate } from "react-router-dom"; // Убрал useParams, т.к. не используется
-import { gamesAPI, profileAPI } from "../../utils/api";
-import { GameType, ProfileType } from "../../types";
+import { useNavigate } from "react-router-dom";
+import { gamesAPI, profileAPI, ratingAPI } from "../../utils/api";
+import { GameType, ProfileType, RatingType } from "../../types";
 import { User } from "../Profile/Profile";
 
 const RatingEpxl = 500;
-const currentUser = rows[10];
-const visibleRows = rows.slice(0, 3);
-if (!visibleRows.some((r) => r.id === currentUser.id)) {
-  visibleRows.push(currentUser);
-}
 
 export default function Main() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [error, setError] = useState("");
-  const [profile, setProfile] = useState<ProfileType>();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [games, setGames] = useState<GameType[]>([]);
+  const [profile, setProfile] = useState<ProfileType | null>(null);
+  const [rating, setRating] = useState<RatingType[]>([]);
   const [nearestGame, setNearestGame] = useState<GameType | null>(null);
 
   useEffect(() => {
-    const getProfile = async () => {
+    const loadProfile = async () => {
       try {
         const response = await profileAPI.getProfile();
         setProfile(response.data);
       } catch (err: any) {
-        setError(err);
+        console.error("Error fetching profile:", err);
       }
     };
-    
-    const getGames = async () => {
+
+    const loadRating = async () => {
+      try {
+        const response = await ratingAPI.getRating();
+        setRating(response.data);
+      } catch (err: any) {
+        console.error("Error fetching rating:", err);
+      } 
+    };
+
+    const loadGames = async () => {
       try {
         const response = await gamesAPI.getGames();
-        const allGames = response.data;
-        setGames(allGames);
-        
+        const allGames: GameType[] = response.data;
         if (allGames && allGames.length > 0) {
           const nearest = findNearestGame(allGames);
           setNearestGame(nearest);
         }
       } catch (err: any) {
-        setError(err);
-      }
+        console.error("Error fetching games:", err);
+      } 
     };
-    
-    getProfile();
-    getGames();
+
+    loadProfile();
+    loadRating();
+    loadGames();
   }, []);
 
-  const formatTime = (timeStr: string) => {
-    if (timeStr && timeStr.includes(':')) {
-      return timeStr.split(':').slice(0, 2).join(':');
+
+  const formatTime = (timeStr?: string) => {
+    if (!timeStr) return "Время не указано";
+    if (timeStr.includes(":")) {
+      return timeStr.split(":").slice(0, 2).join(":");
     }
-    return timeStr || "Время не указано";
+    return timeStr;
   };
 
-  const formatDate = (dateStr: string) => {
-    const months = [
-      'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
-    ];
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "Дата не указана";
     
+    const months = [
+      "января", "февраля", "марта", "апреля", "мая", "июня",
+      "июля", "августа", "сентября", "октября", "ноября", "декабря",
+    ];
+
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    
     const day = date.getDate();
     const month = months[date.getMonth()];
-    
     return `${day} ${month}`;
   };
-  
+
   const findNearestGame = (gamesList: GameType[]) => {
     const now = new Date();
 
     const parseGameDate = (game: GameType) => {
-      let dateObj: Date;
-      
-      if (game.date && game.time) {
-        dateObj = new Date(`${game.date}T${game.time}`);
-      } else if (game.time) {
-        dateObj = new Date(game.time);
-      } else {
-        dateObj = new Date(game.date);
-      }
-      
-      return dateObj;
+      return new Date(`${game.date}T${game.time}`);
     };
-    
-    const upcomingGames = gamesList.filter(game => {
+
+    const upcomingGames = gamesList.filter((game) => {
       const gameDate = parseGameDate(game);
       return gameDate >= now;
     });
-    
+
     if (upcomingGames.length === 0) {
       const sorted = [...gamesList].sort((a, b) => {
         return parseGameDate(a).getTime() - parseGameDate(b).getTime();
       });
       return sorted[0] || null;
     }
-    
+
     const sortedUpcoming = upcomingGames.sort((a, b) => {
       return parseGameDate(a).getTime() - parseGameDate(b).getTime();
     });
-    
+
     return sortedUpcoming[0];
   };
 
   const calcWidth = () => {
     if (!profile?.user) return 0;
     const width = (profile.user.points / RatingEpxl) * 100;
-    return Math.min(width, 100); 
+    return Math.min(width, 100);
   };
 
+  const currentUserInRating = rating?.find(
+    (item) => item.user.user_id === profile?.user?.user_id
+  );
+
+  const currentUserId = currentUserInRating?.user?.user_id || profile?.user?.user_id;
+
+  const getVisibleRows = (): RatingType[] => {
+    if (!rating || rating.length === 0) return [];
+    
+    const topRows = rating.slice(0, 3);
+    
+    if (currentUserInRating && topRows.some(row => row.user.user_id === currentUserId)) {
+      return topRows;
+    }
+    
+    if (currentUserInRating && !topRows.includes(currentUserInRating)) {
+      return [...topRows, currentUserInRating];
+    }
+    
+    return topRows;
+  };
+
+  const visibleRows = getVisibleRows();
   const navigate = useNavigate();
-  
+
+  const handleTournamentClick = () => {
+    if (nearestGame) {
+      navigate(`/tournament/${nearestGame.game_id}`);
+    }
+  };
+
+
+
   return (
     <MainContainer>
-      <TitleContainer onClick={() => navigate(`/games/${nearestGame?.game_id}`)}>
+      <TitleContainer onClick={handleTournamentClick}>
         <img
           src={current_tournament}
           style={{ height: "100%", width: "100%", objectFit: "contain" }}
@@ -146,13 +172,13 @@ export default function Main() {
         {nearestGame && (
           <>
             <InfoChip
-              label={formatTime(nearestGame.time || nearestGame.time || "")}
+              label={formatTime(nearestGame.time)}
               style={{
                 justifyContent: "flex-start",
               }}
             />
             <InfoChip
-              label={formatDate(nearestGame.date || nearestGame.time || "")}
+              label={formatDate(nearestGame.date)}
               style={{
                 fontWeight: "500!important",
                 top: "151px",
@@ -163,7 +189,7 @@ export default function Main() {
           </>
         )}
       </TitleContainer>
-      
+
       <ProfileInfoContainer
         style={{
           height: "95px",
@@ -217,11 +243,14 @@ export default function Main() {
           </div>
         </InfoWrapper>
       </ProfileInfoContainer>
-      
+
       <ProfileRating>
-        <RatingTable rows={visibleRows} currentUserId={currentUser.id} />
+        <RatingTable 
+          rows={visibleRows} 
+          currentUserId={currentUserId || ""}
+        />
       </ProfileRating>
-      
+
       <AboutContainer>
         <MainHelpContainer
           style={{
@@ -245,7 +274,7 @@ export default function Main() {
           </MainHelpSubtitle>
         </MainHelpContainer>
       </AboutContainer>
-      
+
       <ProfileInfoContainer
         style={{
           position: "relative",

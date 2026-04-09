@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   BluredPoint,
   RatingContainer,
@@ -9,14 +9,34 @@ import {
   StyledSelect,
 } from "./styles";
 import MenuItem from "@mui/material/MenuItem";
-import {
-  Chip
-} from "@mui/material";
-import RatingTable, { rows } from "./RatingTable";
-
+import { Chip } from "@mui/material";
+import RatingTable from "./RatingTable";
+import { RatingType } from "../../types";
+import { ratingAPI } from "../../utils/api";
 
 export default function Rating() {
   const [series, setSeries] = React.useState("Мартовская серия");
+  const [loading, setLoading] = useState(true);
+  const [rating, setRating] = useState<RatingType[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getRating = async () => {
+      try {
+        setLoading(true);
+        const response = await ratingAPI.getRating();
+        setRating(response.data);
+        setError(null);
+      } catch (err: any) {
+        console.error("Error fetching rating:", err);
+        setError(err.message || "Ошибка загрузки рейтинга");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getRating();
+  }, []);
 
   const handleChange = (event: any) => {
     setSeries(event.target.value);
@@ -63,7 +83,7 @@ export default function Rating() {
       </RatingHeaderContainer>
       <RatingHeaderContainer style={{ marginTop: "5px", height: "auto" }}>
         <RatingHeaderWrapper style={{ height: "auto" }}>
-          <RatingTable rows={rows}/>
+          <RatingTable rows={rating} />
         </RatingHeaderWrapper>
       </RatingHeaderContainer>
     </RatingContainer>

@@ -28,3 +28,19 @@ export interface GameType {
   reentry_buyin: number,
   time: string
 }
+
+export interface RatingType {
+  games_played: number,
+  points: number,
+  rank: number,
+  user: {
+    created_at: string,
+    first_name: string,
+    is_admin: boolean,
+    is_banned: boolean,
+    points: number,
+    total_games_played: number,
+    user_id: string,
+    username: string
+  }
+}
