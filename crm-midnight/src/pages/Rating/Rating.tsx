@@ -16,8 +16,10 @@ import { ratingAPI } from "../../utils/api";
 
 export default function Rating() {
   const [series, setSeries] = React.useState("Мартовская серия");
+   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState<RatingType[]>([]);
+   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
