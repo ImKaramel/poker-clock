@@ -42,7 +42,7 @@ const App: React.FC = () => {
           return;
         }
 
-        if (isTelegram) {
+        if (user) {
           if (!user)
             throw new Error(
               "initData is empty — Telegram did not provide auth payload"
