@@ -9,7 +9,7 @@ load_dotenv()
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 MINI_APP_URL = "https://poker-clock-nine.vercel.app/"
-API_BASE_URL = os.getenv("REACT_APP_API_URL", "https://api.midnight-club.ru/api")
+API_BASE_URL = os.getenv("REACT_APP_API_URL", "https://api.midnight-club-app.ru/api")
 
 if not BOT_TOKEN:
     raise ValueError("❌ TELEGRAM_BOT_TOKEN not set in .env")

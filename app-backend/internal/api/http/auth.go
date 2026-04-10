@@ -55,6 +55,7 @@ func (h *Handlers) TelegramValidate(c *gin.Context) {
 			"last_name":   derefStrPtr(u.LastName),
 			"telegram_id": u.UserID,
 			"id":          u.UserID,
+			"photo_url":   derefStrPtr(u.PhotoURL),
 		},
 	})
 }
