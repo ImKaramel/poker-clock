@@ -102,7 +102,8 @@ export default function Profile() {
     <ProfileContainer>
       <ProfileInfoContainer>
         <AvatarContainer>
-          <img src={profile?.user.photo_url} style={{ width: "auto" }} alt="avatar" />
+          {/* <img src={profile?.user.photo_url} style={{ width: "auto" }} alt="avatar" /> */}
+          {profile?.user.photo_url}
           <Overlay />
           <InfoWrapper>
             <InfoTitle>{profile?.user?.first_name || "Игрок"}</InfoTitle>
