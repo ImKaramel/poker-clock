@@ -109,7 +109,7 @@ export default function Profile() {
           />
           <Overlay />
           <InfoWrapper>
-            {edited ? (
+            {!edited ? (
               <InfoTitle>
                 {profile?.user?.first_name || "Игрок"}
                 <EditButton onClick={() => setEdited(true)} />
