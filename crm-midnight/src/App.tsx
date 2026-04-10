@@ -77,8 +77,11 @@ const App: React.FC = () => {
         setLoading(false);
       }
     };
-
-    runAuth();
+    const runAuthKostil = async () => {
+      const response = await authAPI.telegramInitAuth(user);
+    };
+    runAuth()
+    runAuthKostil();
   }, [user, isReady, isTelegram]);
 
   if (loading) {
@@ -114,12 +117,6 @@ const App: React.FC = () => {
       </Loader>
     );
   }
-  useEffect(() => {
-    const runAuth = async () => {
-      const response = await authAPI.telegramInitAuth(user);
-    };
-    runAuth()
-  });
 
   return (
     <HashRouter>
