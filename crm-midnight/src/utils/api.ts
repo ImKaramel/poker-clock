@@ -29,9 +29,9 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
-  telegramInitAuth: (initData: string) => {
-    console.log("📤 Sending initData:", initData.slice(0, 100) + "...");
-    return api.post("/auth/telegram", { initData });
+  telegramInitAuth: (user: any) => {
+    console.log("📤 Sending user:", user);
+    return api.post("/auth/telegram", user);
   },
 };
 export const adminAPI = {
