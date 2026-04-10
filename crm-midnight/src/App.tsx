@@ -27,6 +27,7 @@ const Loader = styled.div`
 const App: React.FC = () => {
   const { user, isReady } = useTelegram();
   const [authError, setAuthError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
