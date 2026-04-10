@@ -1,11 +1,14 @@
 // import { faker } from "@faker-js/faker";
 import {
   AvatarContainer,
+  Button,
   GameHistoryContainer,
   GameHistoryTitle,
   GameHistoryWrapper,
   InfoTitle,
   InfoWrapper,
+  Input,
+  InputWrapper,
   LineContainer,
   Overlay,
   ProfileContainer,
@@ -13,6 +16,7 @@ import {
   ProfileRating,
   ProgressBar,
   RatingSubtitle,
+  Wrapper,
 } from "./styles";
 import FlashOnIcon from "@mui/icons-material/FlashOn";
 import RatingTable from "../Rating/RatingTable";
@@ -26,12 +30,13 @@ import {
   TournamentCardContainer,
   TournamentName,
 } from "../Tournaments/styles";
-import { Calendar } from "lucide-react";
+import { Calendar, Check, Cross } from "lucide-react";
 import { ReactComponent as Time } from "../../assets/time.svg";
 import butterfly from "../../assets/butterfly_tournament.png";
 import { useEffect, useState } from "react";
 import { profileAPI, ratingAPI } from "../../utils/api";
 import { ProfileType, RatingType } from "../../types";
+import { ReactComponent as EditButton } from "../../assets/edit.svg";
 
 const RatingEpxl = 500;
 
@@ -41,6 +46,7 @@ export default function Profile() {
   const [rating, setRating] = useState<RatingType[]>([]);
   const [visibleRows, setVisibleRows] = useState<RatingType[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [edited, setEdited] = useState<boolean>(false);
 
   useEffect(() => {
     const getProfile = async () => {
@@ -51,7 +57,7 @@ export default function Profile() {
         setError(err);
       }
     };
-    
+
     const getRating = async () => {
       try {
         const response = await ratingAPI.getRating();
@@ -60,7 +66,7 @@ export default function Profile() {
         setError(err);
       }
     };
-    
+
     getProfile();
     getRating();
   }, [error]);
@@ -70,14 +76,17 @@ export default function Profile() {
       const currentUserInRating = rating.find(
         (item) => item.user.user_id === profile.user.user_id
       );
-      
+
       const topRows = rating.slice(0, 6);
-    
+
       let rows = [...topRows];
-      if (currentUserInRating && !topRows.some(row => row.user.user_id === profile.user.user_id)) {
+      if (
+        currentUserInRating &&
+        !topRows.some((row) => row.user.user_id === profile.user.user_id)
+      ) {
         rows.push(currentUserInRating);
       }
-      
+
       setVisibleRows(rows);
       setCurrentUserId(profile.user.user_id);
     }
@@ -93,10 +102,34 @@ export default function Profile() {
     <ProfileContainer>
       <ProfileInfoContainer>
         <AvatarContainer>
-          <img src={profile?.user.photo_url} style={{ width: "auto" }} alt="avatar" />
+          <img
+            src={profile?.user.photo_url}
+            style={{ width: "auto" }}
+            alt="avatar"
+          />
           <Overlay />
           <InfoWrapper>
-            <InfoTitle>{profile?.user?.first_name || "Игрок"}</InfoTitle>
+            {edited ? (
+              <InfoTitle>
+                {profile?.user?.first_name || "Игрок"}
+                <EditButton onClick={() => setEdited(true)} />
+              </InfoTitle>
+            ) : (
+              <Wrapper>
+                <InputWrapper>
+                  <Input defaultValue="klu4" />
+                </InputWrapper>
+
+                <Button>
+                  <Cross>✕</Cross>
+                </Button>
+
+                <Button>
+                  <Check>✓</Check>
+                </Button>
+              </Wrapper>
+            )}
+
             <LineContainer>
               <ProgressBar style={{ width: `${calcWidth()}%` }} />
             </LineContainer>
@@ -119,11 +152,11 @@ export default function Profile() {
           </InfoWrapper>
         </AvatarContainer>
       </ProfileInfoContainer>
-      
+
       <ProfileRating>
         <RatingTable rows={visibleRows} currentUserId={currentUserId} />
       </ProfileRating>
-      
+
       <GameHistoryContainer>
         <GameHistoryWrapper>
           <GameHistoryTitle>История игр</GameHistoryTitle>
@@ -133,7 +166,7 @@ export default function Profile() {
           </TabContainer>
         </GameHistoryWrapper>
       </GameHistoryContainer>
-      
+
       <TournamentCardContainer>
         <InfoCardContainer>
           <TournamentName>Butterfly Tournament</TournamentName>

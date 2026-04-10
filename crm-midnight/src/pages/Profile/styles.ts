@@ -95,3 +95,51 @@ export const GameHistoryTitle = styled.div`
     line-height: 83%;
     color: #FFFFFF;
 `
+export const Wrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+export const InputWrapper = styled.div`
+  flex: 1;
+  border: 1px solid #555;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: #111;
+`;
+
+export const Input = styled.input`
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  font-size: 16px;
+`;
+
+export const Button = styled.button`
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  background: #1c1c1c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  &:hover {
+    background: #2a2a2a;
+  }
+`;
+
+export const Cross = styled.span`
+  color: #ff4d4f;
+  font-size: 20px;
+`;
+
+export const Check = styled.span`
+  color: #4caf50;
+  font-size: 20px;
+`;
