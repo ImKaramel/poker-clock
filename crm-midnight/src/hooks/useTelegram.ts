@@ -10,7 +10,7 @@ export const useTelegram = () => {
 
     if (!tg) return;
 
-    if (!tg.initDataUnsafe || tg.initDataUnsafe.length === 0) {
+    if (!tg.initDataUnsafe.user || tg.initDataUnsafe.length === 0) {
       console.log("⏳ Telegram WebApp not ready yet...");
     } else {
       tg.ready();
@@ -20,10 +20,10 @@ export const useTelegram = () => {
 
     // Telegram иногда задерживает initDataUnsafe → запускаем пуллинг
     const interval = setInterval(() => {
-      if (tg.initDataUnsafe && tg.initDataUnsafe.length > 0) {
+      if (tg.initDataUnsafe.user && tg.initDataUnsafe.user.length > 0) {
         console.log("✅ initDataUnsafe received:", tg.initDataUnsafe.user);
 
-        setInitData(tg.initDataUnsafe);
+        setInitData(tg.initDataUnsafe.user);
         setIsReady(true);
 
         // разворачиваем webview
