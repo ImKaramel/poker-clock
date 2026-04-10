@@ -33,7 +33,7 @@ const App: React.FC = () => {
     if (!user) return;
     if (!isTelegram) return;
     if (isReady === false) return;
-  
+    console.log(user)
     const runAuth = async () => {
       try {
         const response = await authAPI.telegramInitAuth(user);
