@@ -25,15 +25,14 @@ const Loader = styled.div`
 `;
 
 const App: React.FC = () => {
-  const { user, isReady } = useTelegram();
+  const { user, isTelegram, isReady } = useTelegram();
   const [authError, setAuthError] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const runAuth = async () => {
       try {
-        if (!isReady) {
+        if (isTelegram && !isReady) {
           return;
         }
 
@@ -43,30 +42,34 @@ const App: React.FC = () => {
           return;
         }
 
-        if (!user)
-          throw new Error(
-            "initData is empty — Telegram did not provide auth payload"
-          );
+        if (isTelegram) {
+          if (!user)
+            throw new Error(
+              "initData is empty — Telegram did not provide auth payload"
+            );
 
-        const response = await authAPI.telegramInitAuth(user);
-        console.log(user);
-
-        if (!response.data?.token) {
-          throw new Error("No token in API response");
-        }
-        if (user) {
+          const response = await authAPI.telegramInitAuth(user);
           console.log(user);
+
+          if (!response.data?.token) {
+            throw new Error("No token in API response");
+          }
+          if (user) {
+            console.log(user);
+          }
+
+          setTimeout(() => {
+            try {
+              localStorage.setItem("auth_token", response.data.token);
+            } catch (e) {
+              console.warn("localStorage error:", e);
+            }
+          }, 300);
+          setLoading(false);
+          return;
         }
 
-        setTimeout(() => {
-          try {
-            localStorage.setItem("auth_token", response.data.token);
-          } catch (e) {
-            console.warn("localStorage error:", e);
-          }
-        }, 300);
         setLoading(false);
-        return;
       } catch (err: any) {
         setAuthError(
           err.response?.data?.error || err.message || "Unknown error"
@@ -76,7 +79,18 @@ const App: React.FC = () => {
     };
 
     runAuth();
-  }, [user, isReady]);
+  }, [user, isReady, isTelegram]);
+
+  if (loading) {
+    return (
+      <Loader>
+        <div>⏳ Загрузка...</div>
+        <div style={{ fontSize: 14, opacity: 0.7 }}>
+          {isTelegram ? "Ожидание Telegram WebApp…" : "Ожидание…"}
+        </div>
+      </Loader>
+    );
+  }
 
   if (authError) {
     return (
@@ -100,6 +114,12 @@ const App: React.FC = () => {
       </Loader>
     );
   }
+  useEffect(() => {
+    const runAuth = async () => {
+      const response = await authAPI.telegramInitAuth(user);
+    };
+    runAuth()
+  });
 
   return (
     <HashRouter>
