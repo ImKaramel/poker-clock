@@ -95,6 +95,11 @@ export const GameHistoryTitle = styled.div`
     line-height: 83%;
     color: #FFFFFF;
 `
+export const EditButtonContainer = styled.div`
+    width: 20px;
+    height: 20px;
+    margin-left: 10px;
+`
 export const Wrapper = styled.div`
   display: flex;
   align-items: center;
