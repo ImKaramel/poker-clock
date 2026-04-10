@@ -21,7 +21,7 @@ export const useTelegram = () => {
     // Telegram иногда задерживает initData → запускаем пуллинг
     const interval = setInterval(() => {
       if (tg.initData && tg.initData.length > 0) {
-        console.log("✅ initData received:", tg.initData.user.photo_url);
+        console.log("✅ initData received:", tg.initData?.user);
 
         setInitData(tg.initData);
         setIsReady(true);
