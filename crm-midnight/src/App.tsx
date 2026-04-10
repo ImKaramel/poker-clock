@@ -80,6 +80,8 @@ const App: React.FC = () => {
     const runAuthKostil = async () => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const response = await authAPI.telegramInitAuth(user);
+      console.log(response)
+      console.log(user)
     };
     runAuth()
     runAuthKostil();
