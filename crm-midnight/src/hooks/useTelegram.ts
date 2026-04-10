@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 export const useTelegram = () => {
   const [webApp, setWebApp] = useState<any>(null);
-  const [initDataUnsafe, setInitData] = useState<string | null>(null);
+  const [initDataUnsafe, setInitData] = useState<any>();
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
