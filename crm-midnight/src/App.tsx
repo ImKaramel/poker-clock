@@ -25,14 +25,14 @@ const Loader = styled.div`
 `;
 
 const App: React.FC = () => {
-  const { user, isTelegram, isReady } = useTelegram();
+  const { user, isReady } = useTelegram();
   const [authError, setAuthError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const runAuth = async () => {
       try {
-        if (isTelegram && !isReady) {
+        if (!isReady) {
           return;
         }
 
@@ -42,7 +42,6 @@ const App: React.FC = () => {
           return;
         }
 
-        if (isTelegram) {
           if (!user)
             throw new Error(
               "initData is empty — Telegram did not provide auth payload"
@@ -67,7 +66,7 @@ const App: React.FC = () => {
           }, 300);
           setLoading(false);
           return;
-        }
+      
 
         setLoading(false);
       } catch (err: any) {
@@ -79,18 +78,8 @@ const App: React.FC = () => {
     };
 
     runAuth();
-  }, [user, isReady, isTelegram]);
+  }, [user, isReady]);
 
-  if (loading) {
-    return (
-      <Loader>
-        <div>⏳ Загрузка...</div>
-        <div style={{ fontSize: 14, opacity: 0.7 }}>
-          {isTelegram ? "Ожидание Telegram WebApp…" : "Ожидание…"}
-        </div>
-      </Loader>
-    );
-  }
 
   if (authError) {
     return (
