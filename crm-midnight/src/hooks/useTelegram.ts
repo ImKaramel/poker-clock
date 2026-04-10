@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 export const useTelegram = () => {
   const [webApp, setWebApp] = useState<any>(null);
-  const [initData, setInitData] = useState<string | null>(null);
+  const [initDataUnsafe, setInitData] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -10,7 +10,7 @@ export const useTelegram = () => {
 
     if (!tg) return;
 
-    if (!tg.initData || tg.initData.length === 0) {
+    if (!tg.initDataUnsafe || tg.initDataUnsafe.length === 0) {
       console.log("⏳ Telegram WebApp not ready yet...");
     } else {
       tg.ready();
@@ -18,12 +18,12 @@ export const useTelegram = () => {
 
     setWebApp(tg);
 
-    // Telegram иногда задерживает initData → запускаем пуллинг
+    // Telegram иногда задерживает initDataUnsafe → запускаем пуллинг
     const interval = setInterval(() => {
-      if (tg.initData && tg.initData.length > 0) {
-        console.log("✅ initData received:", tg.initDataUnsafe.user);
+      if (tg.initDataUnsafe && tg.initDataUnsafe.length > 0) {
+        console.log("✅ initDataUnsafe received:", tg.initDataUnsafe.user);
 
-        setInitData(tg.initData);
+        setInitData(tg.initDataUnsafe);
         setIsReady(true);
 
         // разворачиваем webview
@@ -33,9 +33,9 @@ export const useTelegram = () => {
       }
     }, 50);
 
-    // если Telegram так и НЕ передал initData → считаем не MiniApp
+    // если Telegram так и НЕ передал initDataUnsafe → считаем не MiniApp
     const timeout = setTimeout(() => {
-      console.warn("⚠️ initData timeout. Probably not a Mini App.");
+      console.warn("⚠️ initDataUnsafe timeout. Probably not a Mini App.");
       setIsReady(true);
       clearInterval(interval);
     }, 3000);
@@ -48,8 +48,8 @@ export const useTelegram = () => {
 
   return {
     webApp,
-    initData,
+    initDataUnsafe,
     isReady,
-    isTelegram: !!webApp && !!initData,
+    isTelegram: !!webApp && !!initDataUnsafe,
   };
 };

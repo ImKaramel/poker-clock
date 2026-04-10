@@ -25,7 +25,7 @@ const Loader = styled.div`
 `;
 
 const App: React.FC = () => {
-  const { initData, isTelegram, isReady } = useTelegram();
+  const { initDataUnsafe, isTelegram, isReady } = useTelegram();
   const [authError, setAuthError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -43,12 +43,12 @@ const App: React.FC = () => {
         }
 
         if (isTelegram) {
-          if (!initData)
+          if (!initDataUnsafe)
             throw new Error(
               "initData is empty — Telegram did not provide auth payload"
             );
 
-          const response = await authAPI.telegramInitAuth(initData);
+          const response = await authAPI.telegramInitAuth(initDataUnsafe);
           // console.log(initData)
 
           if (!response.data?.token) {
@@ -76,7 +76,7 @@ const App: React.FC = () => {
     };
 
     runAuth();
-  }, [initData, isReady, isTelegram]);
+  }, [initDataUnsafe, isReady, isTelegram]);
 
   if (loading) {
     return (
