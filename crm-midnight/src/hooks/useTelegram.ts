@@ -2,40 +2,35 @@ import { useEffect, useState } from "react";
 
 export const useTelegram = () => {
   const [webApp, setWebApp] = useState<any>(null);
-  const [initDataUnsafe, setInitData] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);           // ← меняем название и тип
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
-    console.log("initdata:", tg.initDataUnsafe.user)
     if (!tg) return;
 
-    if (!tg.initDataUnsafe.user || tg.initDataUnsafe.length === 0) {
-      console.log("⏳ Telegram WebApp not ready yet...");
-    } else {
-      tg.ready();
-    }
+    console.log("Telegram WebApp initDataUnsafe.user:", tg.initDataUnsafe?.user);
+
+    tg.ready();
+    tg.expand();
 
     setWebApp(tg);
 
-    // Telegram иногда задерживает initDataUnsafe → запускаем пуллинг
+    // Пуллинг на случай задержки Telegram
     const interval = setInterval(() => {
-      if (tg.initDataUnsafe.user && tg.initDataUnsafe.user.length > 0) {
-        console.log("✅ initDataUnsafe received:", tg.initDataUnsafe.user);
+      const tgUser = tg.initDataUnsafe?.user;
 
-        setInitData(tg.initDataUnsafe.user);
+      if (tgUser && tgUser.id) {                    // проверяем по наличию id
+        console.log("✅ Telegram user received:", tgUser);
+
+        setUser(tgUser);                            // сохраняем объект пользователя
         setIsReady(true);
-
-        // разворачиваем webview
-        tg.expand();
-
         clearInterval(interval);
       }
     }, 50);
 
-    // если Telegram так и НЕ передал initDataUnsafe → считаем не MiniApp
     const timeout = setTimeout(() => {
-      console.warn("⚠️ initDataUnsafe timeout. Probably not a Mini App.");
+      console.warn("⚠️ Timeout waiting for Telegram user");
       setIsReady(true);
       clearInterval(interval);
     }, 3000);
@@ -44,12 +39,12 @@ export const useTelegram = () => {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, []); // Оставляем пустой массив
+  }, []);
 
   return {
     webApp,
-    initDataUnsafe,
+    user,                    // ← теперь возвращаем user, а не initDataUnsafe
     isReady,
-    isTelegram: !!webApp && !!initDataUnsafe,
+    isTelegram: !!webApp && !!user,
   };
-};
+}
