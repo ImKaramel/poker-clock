@@ -33,15 +33,6 @@ import { useEffect, useState } from "react";
 import { profileAPI, ratingAPI } from "../../utils/api";
 import { ProfileType, RatingType } from "../../types";
 
-// const generateAvatar = () => {
-//   return {
-//     nickname: faker.person.firstName(),
-//     avatar: faker.image.avatar(),
-//     rating: faker.number.int({ min: 50, max: 500 }),
-//   };
-// };
-// export const User = generateAvatar();
-
 const RatingEpxl = 500;
 
 export default function Profile() {

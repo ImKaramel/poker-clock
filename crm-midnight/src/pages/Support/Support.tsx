@@ -90,7 +90,7 @@ export default function Support() {
         ))}
       </FaqList>
       <TelegramButton
-        style={{ position: "absolute", textTransform: "initial" }}
+        style={{ position: "fixed", textTransform: "initial", bottom: '100px' }}
         href="https://t.me/Onlylazovic"
       >
         Связаться с поддержкой
