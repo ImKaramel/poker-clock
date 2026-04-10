@@ -25,7 +25,7 @@ import { ReactComponent as LogoVector } from "../../assets/logo_vector.svg";
 import { useNavigate } from "react-router-dom";
 import { gamesAPI, profileAPI, ratingAPI } from "../../utils/api";
 import { GameType, ProfileType, RatingType } from "../../types";
-import { User } from "../Profile/Profile";
+// import { User } from "../Profile/Profile";
 
 const RatingEpxl = 500;
 
@@ -207,7 +207,7 @@ export default function Main() {
       >
         <MainAvatarContainer>
           <img
-            src={User.avatar}
+            src={profile?.user.photo_url}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
             alt="avatar"
           />

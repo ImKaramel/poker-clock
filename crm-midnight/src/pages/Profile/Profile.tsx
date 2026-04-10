@@ -1,4 +1,4 @@
-import { faker } from "@faker-js/faker";
+// import { faker } from "@faker-js/faker";
 import {
   AvatarContainer,
   GameHistoryContainer,
@@ -33,14 +33,14 @@ import { useEffect, useState } from "react";
 import { profileAPI, ratingAPI } from "../../utils/api";
 import { ProfileType, RatingType } from "../../types";
 
-const generateAvatar = () => {
-  return {
-    nickname: faker.person.firstName(),
-    avatar: faker.image.avatar(),
-    rating: faker.number.int({ min: 50, max: 500 }),
-  };
-};
-export const User = generateAvatar();
+// const generateAvatar = () => {
+//   return {
+//     nickname: faker.person.firstName(),
+//     avatar: faker.image.avatar(),
+//     rating: faker.number.int({ min: 50, max: 500 }),
+//   };
+// };
+// export const User = generateAvatar();
 
 const RatingEpxl = 500;
 
@@ -102,7 +102,7 @@ export default function Profile() {
     <ProfileContainer>
       <ProfileInfoContainer>
         <AvatarContainer>
-          <img src={User.avatar} style={{ width: "auto" }} alt="avatar" />
+          <img src={profile?.user.photo_url} style={{ width: "auto" }} alt="avatar" />
           <Overlay />
           <InfoWrapper>
             <InfoTitle>{profile?.user?.first_name || "Игрок"}</InfoTitle>

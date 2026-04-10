@@ -8,7 +8,8 @@ export interface ProfileType {
     points: number,
     total_games_played: number,
     user_id: string,
-    username: string
+    username: string,
+    photo_url: string
   }
 }
 
