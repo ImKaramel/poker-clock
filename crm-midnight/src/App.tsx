@@ -30,61 +30,27 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
+    if (!isTelegram) return;
+    if (isReady === false) return;
+  
     const runAuth = async () => {
       try {
-        if (isTelegram && !isReady) {
-          return;
+        const response = await authAPI.telegramInitAuth(user);
+  
+        if (!response.data?.token) {
+          throw new Error("No token in API response");
         }
-
-        const existing = localStorage.getItem("auth_token");
-        if (existing) {
-          setLoading(false);
-          return;
-        }
-
-        if (user) {
-          if (!user)
-            throw new Error(
-              "initData is empty — Telegram did not provide auth payload"
-            );
-
-          const response = await authAPI.telegramInitAuth(user);
-          console.log(user);
-
-          if (!response.data?.token) {
-            throw new Error("No token in API response");
-          }
-          if (user) {
-            console.log(user);
-          }
-
-          setTimeout(() => {
-            try {
-              localStorage.setItem("auth_token", response.data.token);
-            } catch (e) {
-              console.warn("localStorage error:", e);
-            }
-          }, 300);
-          setLoading(false);
-          return;
-        }
-
+  
+        localStorage.setItem("auth_token", response.data.token);
         setLoading(false);
-      } catch (err: any) {
-        setAuthError(
-          err.response?.data?.error || err.message || "Unknown error"
-        );
+      } catch (e: any) {
+        setAuthError(e.message);
         setLoading(false);
       }
     };
-    const runAuthKostil = async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const response = await authAPI.telegramInitAuth(user);
-      console.log(response)
-      console.log(user)
-    };
-    runAuth()
-    runAuthKostil();
+  
+    runAuth();
   }, [user, isReady, isTelegram]);
 
   if (loading) {
