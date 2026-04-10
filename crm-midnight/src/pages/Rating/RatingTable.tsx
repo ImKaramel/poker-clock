@@ -3,17 +3,12 @@ import { Table, Box } from '@mui/material'
 import { StyledBox, StyledTableCell, StyledTypography } from './styles'
 import FlashOnIcon from "@mui/icons-material/FlashOn"; 
 import { RatingType } from '../../types';
-import { faker } from "@faker-js/faker";
 
 interface RatingTableProps {
   rows: RatingType[];
   currentUserId?: string;
 }
 
-const getAvatarForUser = (userId: string, firstName: string) => {
-  faker.seed(parseInt(userId) || 0);
-  return faker.image.avatar();
-};
 
 export default function RatingTable({ rows, currentUserId }: RatingTableProps) {
   return (
@@ -96,7 +91,7 @@ export default function RatingTable({ rows, currentUserId }: RatingTableProps) {
                         )}
                       </Box>
                       <Avatar
-                        src={getAvatarForUser(row.user.user_id, row.user.first_name)}
+                        src={row.user.photo_url}
                         alt={row.user.username}
                         sx={{ width: 22, height: 22 }}
                       />

@@ -43,5 +43,6 @@ export interface RatingType {
     total_games_played: number,
     user_id: string,
     username: string
+    photo_url: string
   }
 }
