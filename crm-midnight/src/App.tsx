@@ -55,7 +55,7 @@ const App: React.FC = () => {
             throw new Error("No token in API response");
           }
           if(initDataUnsafe){
-            
+            console.log(initDataUnsafe)
           }
 
           setTimeout(() => {
