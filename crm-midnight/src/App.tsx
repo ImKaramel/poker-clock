@@ -33,15 +33,17 @@ const App: React.FC = () => {
     if (!user) return;
     if (!isTelegram) return;
     if (isReady === false) return;
-    console.log(user)
+    console.log(user);
     const runAuth = async () => {
       try {
-        const response = await authAPI.telegramInitAuth(JSON.stringify(user));
-  
+        const response = await authAPI.telegramInitAuth({
+          user,
+        });
+
         if (!response.data?.token) {
           throw new Error("No token in API response");
         }
-  
+
         localStorage.setItem("auth_token", response.data.token);
         setLoading(false);
       } catch (e: any) {
@@ -49,7 +51,7 @@ const App: React.FC = () => {
         setLoading(false);
       }
     };
-  
+
     runAuth();
   }, [user, isReady, isTelegram]);
 
