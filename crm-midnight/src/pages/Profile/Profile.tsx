@@ -60,7 +60,7 @@ export default function Profile() {
         setError(err);
       }
     };
-
+    
     const getRating = async () => {
       try {
         const response = await ratingAPI.getRating();
@@ -69,7 +69,7 @@ export default function Profile() {
         setError(err);
       }
     };
-
+    
     getProfile();
     getRating();
   }, [error]);
@@ -79,17 +79,14 @@ export default function Profile() {
       const currentUserInRating = rating.find(
         (item) => item.user.user_id === profile.user.user_id
       );
-
+      
       const topRows = rating.slice(0, 6);
-
+    
       let rows = [...topRows];
-      if (
-        currentUserInRating &&
-        !topRows.some((row) => row.user.user_id === profile.user.user_id)
-      ) {
+      if (currentUserInRating && !topRows.some(row => row.user.user_id === profile.user.user_id)) {
         rows.push(currentUserInRating);
       }
-
+      
       setVisibleRows(rows);
       setCurrentUserId(profile.user.user_id);
     }
@@ -105,12 +102,7 @@ export default function Profile() {
     <ProfileContainer>
       <ProfileInfoContainer>
         <AvatarContainer>
-          <object
-            data={profile?.user.photo_url}
-            type="image/svg+xml"
-            width="40"
-            height="40"
-          />
+          <img src={profile?.user.photo_url} style={{ width: "auto" }} alt="avatar" />
           <Overlay />
           <InfoWrapper>
             <InfoTitle>{profile?.user?.first_name || "Игрок"}</InfoTitle>
@@ -136,11 +128,11 @@ export default function Profile() {
           </InfoWrapper>
         </AvatarContainer>
       </ProfileInfoContainer>
-
+      
       <ProfileRating>
         <RatingTable rows={visibleRows} currentUserId={currentUserId} />
       </ProfileRating>
-
+      
       <GameHistoryContainer>
         <GameHistoryWrapper>
           <GameHistoryTitle>История игр</GameHistoryTitle>
@@ -150,7 +142,7 @@ export default function Profile() {
           </TabContainer>
         </GameHistoryWrapper>
       </GameHistoryContainer>
-
+      
       <TournamentCardContainer>
         <InfoCardContainer>
           <TournamentName>Butterfly Tournament</TournamentName>
