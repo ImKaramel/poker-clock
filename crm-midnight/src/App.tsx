@@ -43,33 +43,30 @@ const App: React.FC = () => {
           return;
         }
 
-          if (!user)
-            throw new Error(
-              "initData is empty — Telegram did not provide auth payload"
-            );
+        if (!user)
+          throw new Error(
+            "initData is empty — Telegram did not provide auth payload"
+          );
 
-          const response = await authAPI.telegramInitAuth(user);
-          console.log(user)
+        const response = await authAPI.telegramInitAuth(user);
+        console.log(user);
 
-          if (!response.data?.token) {
-            throw new Error("No token in API response");
+        if (!response.data?.token) {
+          throw new Error("No token in API response");
+        }
+        if (user) {
+          console.log(user);
+        }
+
+        setTimeout(() => {
+          try {
+            localStorage.setItem("auth_token", response.data.token);
+          } catch (e) {
+            console.warn("localStorage error:", e);
           }
-          if(user){
-            console.log(user)
-          }
-
-          setTimeout(() => {
-            try {
-              localStorage.setItem("auth_token", response.data.token);
-            } catch (e) {
-              console.warn("localStorage error:", e);
-            }
-          }, 300);
-          setLoading(false);
-          return;
-      
-
+        }, 300);
         setLoading(false);
+        return;
       } catch (err: any) {
         setAuthError(
           err.response?.data?.error || err.message || "Unknown error"
@@ -80,7 +77,6 @@ const App: React.FC = () => {
 
     runAuth();
   }, [user, isReady]);
-
 
   if (authError) {
     return (
