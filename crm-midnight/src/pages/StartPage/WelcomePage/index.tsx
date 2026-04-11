@@ -61,7 +61,7 @@ export default function StartPage() {
                 color="black"
                 transform="rotate(180)"
               ></ArrowIcon> */}
-              <img src={logo_button} style={{width: '16px', height: '16px'}}/>
+              <img src={logo_button} style={{width: '16px', height: '16px'}} alt="button logo"/>
             </ArrowButton>
           </ArrowContainer>
           <RectangleText
