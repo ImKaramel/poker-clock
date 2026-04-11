@@ -48,6 +48,7 @@ export default function Profile() {
   const [visibleRows, setVisibleRows] = useState<RatingType[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [edited, setEdited] = useState<boolean>(false);
+  const [updatedNickname, setUpdatedNickname] = useState<string>("Ваш ник");
 
   useEffect(() => {
     const getProfile = async () => {
@@ -67,7 +68,6 @@ export default function Profile() {
         setError(err);
       }
     };
-
     getProfile();
     getRating();
   }, [error]);
@@ -93,6 +93,14 @@ export default function Profile() {
     }
   }, [rating, profile]);
 
+  const updateNickname = async () => {
+    try {
+      const responce = await profileAPI.updateProfile(updatedNickname);
+    } catch (err: any) {
+      setError(err);
+    }
+  };
+
   const calcWidth = () => {
     if (!profile?.user) return 0;
     const width = (profile.user.points / RatingEpxl) * 100;
@@ -111,8 +119,16 @@ export default function Profile() {
           <Overlay />
           <InfoWrapper>
             {!edited ? (
-              <div style={{display: 'flex', alignItems: 'baseline', justifyContent:'flex-start'}}>
-                <InfoTitle style={{width: 'auto'}}>{profile?.user?.first_name || "Игрок"}</InfoTitle>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  justifyContent: "flex-start",
+                }}
+              >
+                <InfoTitle style={{ width: "auto" }}>
+                  {profile?.user?.nickname || profile?.user?.first_name}
+                </InfoTitle>
                 <EditButtonContainer>
                   <EditButton
                     onClick={() => setEdited(true)}
@@ -124,14 +140,26 @@ export default function Profile() {
             ) : (
               <Wrapper>
                 <InputWrapper>
-                  <Input defaultValue="Ваш ник" />
+                  <Input
+                    value={updatedNickname}
+                    onChange={(e) => setUpdatedNickname(e.target.value)}
+                  />
                 </InputWrapper>
 
-                <Button>
+                <Button
+                  style={{ color: "#fff" }}
+                  onClick={() => setEdited(false)}
+                >
                   <X>✕</X>
                 </Button>
 
-                <Button>
+                <Button
+                  style={{ color: "#fff" }}
+                  onClick={async () => {
+                    await updateNickname();
+                    setEdited(false);
+                  }}
+                >
                   <Check>✓</Check>
                 </Button>
               </Wrapper>

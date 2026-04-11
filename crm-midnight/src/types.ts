@@ -9,7 +9,8 @@ export interface ProfileType {
     total_games_played: number,
     user_id: string,
     username: string,
-    photo_url: string
+    photo_url: string,
+    nickname?: string
   }
 }
 
