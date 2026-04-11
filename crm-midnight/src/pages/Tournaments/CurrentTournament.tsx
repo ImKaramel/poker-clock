@@ -14,17 +14,18 @@ import {
 } from "./styles";
 import current_tournament from "../../assets/grand_opening.jpg";
 import { ReactComponent as Warning } from "../../assets/warning.svg";
-import { GameType } from "../../types";
+import { GameParticipant, GameType } from "../../types";
 import { gamesAPI, profileAPI } from "../../utils/api";
 import { useParams } from "react-router-dom";
 import { InfoChip } from "../Main/styles";
 
 export default function CurrentTournament() {
   const { id } = useParams<{ id: string }>();
-   // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState("");
   const [game, setGame] = useState<GameType>();
   const [upcomingGames, setUpcomingGames] = useState<number[]>([]);
+  const [countParticipant, setCountParticipant] = useState<number>(0)
 
   const formatTime = (timeStr: string) => {
     if (timeStr && timeStr.includes(":")) {
@@ -77,31 +78,43 @@ export default function CurrentTournament() {
         setError(err);
       }
     };
+    const getCountParticipants = async () => {
+      try {
+        if (!id) return;
+    
+        const response = await gamesAPI.getParticipantsAdmin(parseInt(id));
+    
+        setCountParticipant(response.data.length); // 👈 ВОТ ЭТО ГЛАВНОЕ
+    
+      } catch (err: any) {
+        setError(err);
+      }
+    };
     getProfile();
     getGames();
+    getCountParticipants();
   }, [id]);
 
   const Registry = async () => {
     if (!id) return;
-  
+
     try {
       if (!isRegistered) {
         await gamesAPI.registerForGame(parseInt(id));
       } else {
         await gamesAPI.discardRegisterForGame(parseInt(id));
       }
-  
+
       // рефетч профиля
       const response = await profileAPI.getProfile();
       const ids = response.data.upcoming_games.map((g: any) => g.game_id);
       setUpcomingGames(ids);
-  
     } catch (err: any) {
       setError(err);
     }
   };
   const isRegistered = game ? upcomingGames.includes(game.game_id) : false;
-  console.log(isRegistered)
+  console.log(isRegistered);
   return (
     <CurrentTournamentContainer>
       <TitleContainer>
@@ -118,6 +131,15 @@ export default function CurrentTournament() {
         />
         <InfoChip
           label={formatDate(game?.date || game?.time || "")}
+          style={{
+            fontWeight: "500!important",
+            top: "151px",
+            // width: "193px",
+            justifyContent: "flex-start",
+          }}
+        />
+        <InfoChip
+          label={`Участников: ${countParticipant}`}
           style={{
             fontWeight: "500!important",
             top: "151px",

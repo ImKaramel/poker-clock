@@ -51,3 +51,20 @@ export interface RatingType {
     nick_name?: string
   }
 }
+export interface GameParticipant {
+  addons: number,
+  entries: number,
+  final_points: number,
+  game: string,
+  id: number,
+  joined_at: string,
+  position: any,
+  rebuys: number,
+  user: string,
+  user_info: {
+    first_name: string,
+    last_name: string,
+    user_id: number,
+    username: string
+  }
+}
