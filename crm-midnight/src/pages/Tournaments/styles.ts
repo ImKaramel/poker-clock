@@ -97,7 +97,7 @@ export const TimeContainer = styled.div`
   gap: 5px;
 `;
 export const TimeTitle = styled.div`
-  width: 47px;
+  width: auto;
   height: 12px;
   font-weight: 400;
   font-size: 12px;
