@@ -76,9 +76,9 @@ export default function Rating() {
               displayEmpty
               inputProps={{ "aria-label": "Выбор серии" }}
             >
-              <MenuItem value="Мартовская серия">Мартовская серия</MenuItem>
+              {/* <MenuItem value="Мартовская серия">Мартовская серия</MenuItem> */}
               <MenuItem value="Апрельская серия">Апрельская серия</MenuItem>
-              <MenuItem value="Майская серия">Майская серия</MenuItem>
+              {/* <MenuItem value="Майская серия">Майская серия</MenuItem> */}
             </StyledSelect>
           </RatingPeriodContainer>
         </RatingHeaderWrapper>
