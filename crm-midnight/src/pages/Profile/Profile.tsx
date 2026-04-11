@@ -113,6 +113,30 @@ export default function Profile() {
     }
   };
 
+  const formatTime = (timeStr?: string) => {
+    if (!timeStr) return "Время не указано";
+    if (timeStr.includes(":")) {
+      return timeStr.split(":").slice(0, 2).join(":");
+    }
+    return timeStr;
+  };
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "Дата не указана";
+    
+    const months = [
+      "января", "февраля", "марта", "апреля", "мая", "июня",
+      "июля", "августа", "сентября", "октября", "ноября", "декабря",
+    ];
+
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    return `${day} ${month}`;
+  };
+
   const calcWidth = () => {
     if (!profile?.user) return 0;
     const width = (profile.user.points / RatingEpxl) * 100;
@@ -228,7 +252,7 @@ export default function Profile() {
               >
                 <Calendar />
               </div>
-              <TimeTitle>{item.date}</TimeTitle>
+              <TimeTitle>{formatDate(item.date)}</TimeTitle>
             </TimeContainer>
             <TimeContainer style={{ gridColumn: "2/3" }}>
               <div
@@ -241,7 +265,7 @@ export default function Profile() {
               >
                 <Time />
               </div>
-              <TimeTitle>{item.time}</TimeTitle>
+              <TimeTitle>{formatTime(item.time)}</TimeTitle>
             </TimeContainer>
           </InfoCardContainer>
           <img src={tournament_image} alt="img" />
