@@ -38,6 +38,7 @@ export const SubTitle = styled.div`
 export const BackgroundContainer = styled.div`
     width: 100%;
     overflow: hidden;
+    height: 100vh;
 `
 export const IndicatorContainer = styled.div`
     width: 63px;
