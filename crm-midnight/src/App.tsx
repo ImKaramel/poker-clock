@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import styled from "styled-components";
 import { useTelegram } from "./hooks/useTelegram";
 import { authAPI } from "./utils/api";
+
 import Schedule from "./pages/Tournaments/Schedule";
 import About from "./pages/About/About";
 import CurrentTournament from "./pages/Tournaments/CurrentTournament";
@@ -30,40 +31,36 @@ const Loader = styled.div`
 
 const App: React.FC = () => {
   const { user, isTelegram, isReady } = useTelegram();
-  const [authError, setAuthError] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate()
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [initialRoute, setInitialRoute] = useState<string | null>(null);
+
   useEffect(() => {
-    if (!user) return;
-    if (!isTelegram) return;
-    if (isReady === false) return;
-    console.log(user);
+    if (!user || !isTelegram || !isReady) return;
+
     const runAuth = async () => {
       try {
-        const response = await authAPI.telegramInitAuth({
-          user,
-        });
+        const response = await authAPI.telegramInitAuth({ user });
 
         if (!response.data?.token) {
           throw new Error("No token in API response");
         }
-        if (response.data.isNew) {
-          localStorage.setItem("auth_token", response.data.token);
-          setLoading(false);
-          navigate('/start', { replace: true });
-          return;
-        }
 
         localStorage.setItem("auth_token", response.data.token);
-        setLoading(false);
+
+        // 👇 ВАЖНО: решаем маршрут ДО рендера
+        setInitialRoute(response.data.isNew ? "/start" : "/");
+
       } catch (e: any) {
         setAuthError(e.message);
+      } finally {
         setLoading(false);
       }
     };
 
     runAuth();
-  }, [user, isReady, isTelegram, navigate]);
+  }, [user, isTelegram, isReady]);
 
   if (loading) {
     return (
@@ -81,18 +78,7 @@ const App: React.FC = () => {
       <Loader>
         <h2>❌ Ошибка авторизации</h2>
         <p>{authError}</p>
-        <button
-          onClick={() => window.location.reload()}
-          style={{
-            marginTop: 12,
-            padding: "10px 18px",
-            borderRadius: 8,
-            background: "#2196F3",
-            color: "white",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
+        <button onClick={() => window.location.reload()}>
           Перезапустить
         </button>
       </Loader>
@@ -100,25 +86,28 @@ const App: React.FC = () => {
   }
 
   return (
-    // <HashRouter>
-      <>
-        <Routes>
-          <Route path="/" element={<Main />} />
-          <Route path="/rating" element={<Rating />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/games" element={<Schedule />} />
-          <Route path="/games/:id" element={<CurrentTournament />} />
-          <Route path="/support" element={<Support />} />
-          <Route path="/start" element={<Welcome />} />
-          <Route path="/useragreement" element={<UserAgreement />} />
-          <Route path="/welcome-page" element={<StartPage />} />
-          <Route path="/rating-page" element={<RatingPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <Menu />
-      </>
-    // </HashRouter>
+    <>
+      <Routes>
+        <Route path="/" element={<Main />} />
+        <Route path="/rating" element={<Rating />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/games" element={<Schedule />} />
+        <Route path="/games/:id" element={<CurrentTournament />} />
+        <Route path="/support" element={<Support />} />
+
+        <Route path="/start" element={<Welcome />} />
+        <Route path="/useragreement" element={<UserAgreement />} />
+        <Route path="/welcome-page" element={<StartPage />} />
+        <Route path="/rating-page" element={<RatingPage />} />
+
+        {initialRoute && (
+          <Route path="*" element={<Navigate to={initialRoute} replace />} />
+        )}
+      </Routes>
+
+      <Menu />
+    </>
   );
 };
 
