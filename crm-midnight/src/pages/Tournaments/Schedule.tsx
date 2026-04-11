@@ -14,7 +14,7 @@ import {
 } from "./styles";
 import { ReactComponent as Calendar } from "../../assets/calendar_date.svg";
 import { ReactComponent as Time } from "../../assets/time.svg";
-import butterfly from "../../assets/butterfly_tournament.png";
+import tournament_image from "../../assets/tournament_image.png";
 import { GameType } from "../../types";
 import { gamesAPI } from "../../utils/api";
 import { useNavigate } from "react-router-dom";
@@ -82,7 +82,7 @@ export default function Schedule() {
               <TimeTitle>{item.time}</TimeTitle>
             </TimeContainer>
           </InfoCardContainer>
-          <img src={butterfly} alt="img" />
+          <img src={tournament_image} alt="img" />
         </TournamentCardContainer>
       ))}
     </TournamentsContainer>

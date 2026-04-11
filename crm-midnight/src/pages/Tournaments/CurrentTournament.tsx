@@ -12,7 +12,7 @@ import {
   WarningTitle,
   WarningWrapper,
 } from "./styles";
-import current_tournament from "../../assets/current_tournament.jpg";
+import current_tournament from "../../assets/grand_opening.jpg";
 import { ReactComponent as Warning } from "../../assets/warning.svg";
 import { GameType } from "../../types";
 import { gamesAPI } from "../../utils/api";
