@@ -106,6 +106,7 @@ export const RoundedRectangleContainer = styled.div`
     display: flex;
     align-items: center;
     justify-content: space-between;
+    margin: 0 auto;
 `
 export const NextArrow = styled.div`
     display: flex;

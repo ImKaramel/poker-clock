@@ -53,17 +53,17 @@ export default function StartPage() {
           </ArrowButton>
         </ArrowContainer> */}
         <RoundedRectangleContainer>
-          <ArrowContainer style={{ backgroundColor: "#fff" }}>
+          {/* <ArrowContainer style={{ backgroundColor: "#fff" }}>
             <ArrowButton>
-              {/* <ArrowIcon
+              <ArrowIcon
                 width={16}
                 height={16}
                 color="black"
                 transform="rotate(180)"
-              ></ArrowIcon> */}
-              <img src={logo_button} style={{width: '16px', height: '16px'}} alt="button logo"/>
+              ></ArrowIcon>
+              <img src={logo_button} style={{width: '16px', height: '16px'}} alt="button"/>
             </ArrowButton>
-          </ArrowContainer>
+          </ArrowContainer> */}
           <RectangleText
             onClick={() => {
               navigate("/rating-page");
