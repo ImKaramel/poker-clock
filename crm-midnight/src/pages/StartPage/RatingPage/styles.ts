@@ -20,7 +20,7 @@ export const BackgroundContainer = styled.div`
 
 export const InfoContainer = styled.div`
   position: absolute;
-  top: 397px;
+  top: 300px;
   left: 50%;
   transform: translateX(-50%);
   width: 388px;
