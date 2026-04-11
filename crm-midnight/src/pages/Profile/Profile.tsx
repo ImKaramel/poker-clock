@@ -48,7 +48,7 @@ export default function Profile() {
   const [visibleRows, setVisibleRows] = useState<RatingType[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [edited, setEdited] = useState<boolean>(false);
-  const [updatedNickname, setUpdatedNickname] = useState<string>("Ваш ник");
+  const [nick_name, setNick_name] = useState<string>("Ваш ник");
 
   useEffect(() => {
     const getProfile = async () => {
@@ -96,8 +96,8 @@ export default function Profile() {
   const updateNickname = async () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const response = await profileAPI.updateProfile(updatedNickname);
-      console.log(updatedNickname)
+      const response = await profileAPI.updateProfile(nick_name);
+      console.log(nick_name)
     } catch (err: any) {
       setError(err);
     }
@@ -143,8 +143,8 @@ export default function Profile() {
               <Wrapper>
                 <InputWrapper>
                   <Input
-                    value={updatedNickname}
-                    onChange={(e) => setUpdatedNickname(e.target.value)}
+                    value={nick_name}
+                    onChange={(e) => setNick_name(e.target.value)}
                   />
                 </InputWrapper>
 
