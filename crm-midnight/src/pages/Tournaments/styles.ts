@@ -89,11 +89,11 @@ export const TournamentName = styled.div`
 `;
 export const TimeContainer = styled.div`
   grid-column: 1 / 2;
-  width: 64px;
+  width: auto;
   height: 12px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 5px;
 `;
 export const TimeTitle = styled.div`
