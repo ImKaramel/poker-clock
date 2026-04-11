@@ -96,7 +96,7 @@ export default function RatingTable({ rows, currentUserId }: RatingTableProps) {
                         sx={{ width: 22, height: 22 }}
                       />
                       <StyledTypography variant="body1" sx={{ color: "#fff!important", fontSize: '15px' }}>
-                        {row.user.nick_name}
+                        {row.user.nick_name || row.user.first_name}
                       </StyledTypography>
                     </Stack>
                   </TableCell>
