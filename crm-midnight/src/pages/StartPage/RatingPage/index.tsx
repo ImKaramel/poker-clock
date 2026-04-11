@@ -71,6 +71,7 @@ export default function RatingPage() {
                       height: "100%",
                       objectFit: "cover",
                     }}
+                    alt="user"
                   />
                 </UserImage>
                 <UserBackground>
@@ -100,6 +101,7 @@ export default function RatingPage() {
                       height: "100%",
                       objectFit: "cover",
                     }}
+                    alt="user"
                   />
                 </UserImage>
                 <UserBackground style={{ height: "58px", top: "15px" }}>
@@ -137,6 +139,7 @@ export default function RatingPage() {
                       height: "100%",
                       objectFit: "cover",
                     }}
+                    alt="user"
                   />
                 </UserImage>
                 <UserBackground>

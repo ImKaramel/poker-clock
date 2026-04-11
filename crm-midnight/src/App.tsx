@@ -60,7 +60,7 @@ const App: React.FC = () => {
     };
 
     runAuth();
-  }, [user, isReady, isTelegram]);
+  }, [user, isReady, isTelegram, navigate]);
 
   if (loading) {
     return (
