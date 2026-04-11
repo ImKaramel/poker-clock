@@ -15,7 +15,7 @@ import {
 import current_tournament from "../../assets/grand_opening.jpg";
 import { ReactComponent as Warning } from "../../assets/warning.svg";
 import { GameType } from "../../types";
-import { gamesAPI } from "../../utils/api";
+import { gamesAPI, profileAPI } from "../../utils/api";
 import { useParams } from "react-router-dom";
 import { InfoChip } from "../Main/styles";
 
@@ -23,7 +23,7 @@ export default function CurrentTournament() {
   const { id } = useParams<{ id: string }>();
   const [error, setError] = useState("");
   const [game, setGame] = useState<GameType>();
-  const [registered, setRegistered] = useState<boolean>(false);
+  const [upcomingGames, setUpcomingGames] = useState<number[]>([]);
 
   const formatTime = (timeStr: string) => {
     if (timeStr && timeStr.includes(":")) {
@@ -65,29 +65,41 @@ export default function CurrentTournament() {
         setError(err);
       }
     };
+    const getProfile = async () => {
+      try {
+        const response = await profileAPI.getProfile();
+
+        const ids = response.data.upcoming_games.map((g: any) => g.game_id);
+
+        setUpcomingGames(ids);
+      } catch (err: any) {
+        setError(err);
+      }
+    };
+    getProfile();
     getGames();
-  }, [id, error]);
+  }, [id]);
 
   const Registry = async () => {
     if (!id) return;
-    if (!registered) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const response = await gamesAPI.registerForGame(parseInt(id));
-        setRegistered(true);
-      } catch (err: any) {
-        setError(err);
+  
+    try {
+      if (!isRegistered) {
+        await gamesAPI.registerForGame(parseInt(id));
+      } else {
+        await gamesAPI.discardRegisterForGame(parseInt(id));
       }
-    } else {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const response = await gamesAPI.discardRegisterForGame(parseInt(id));
-        setRegistered(false);
-      } catch (err: any) {
-        setError(err);
-      }
+  
+      // рефетч профиля
+      const response = await profileAPI.getProfile();
+      const ids = response.data.upcoming_games.map((g: any) => g.game_id);
+      setUpcomingGames(ids);
+  
+    } catch (err: any) {
+      setError(err);
     }
   };
+  const isRegistered = game ? upcomingGames.includes(game.game_id) : false;
   return (
     <CurrentTournamentContainer>
       <TitleContainer>
@@ -144,7 +156,7 @@ export default function CurrentTournament() {
         </RulesWrapper>
       </RulesContainer>
       <JoinButton onClick={Registry}>
-        {registered ? "Вы зарегестрированы" : "Участвовать"}
+        {isRegistered ? "Вы зарегистрированы" : "Участвовать"}
       </JoinButton>
     </CurrentTournamentContainer>
   );
