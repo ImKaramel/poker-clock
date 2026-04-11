@@ -9,7 +9,7 @@ import {
   MainHelpTitle,
 } from "./styles";
 import { TitleContainer } from "../Tournaments/styles";
-import current_tournament from "../../assets/current_tournament.jpg";
+import current_tournament from "../../assets/grand_opening.jpg";
 import {
   InfoTitle,
   InfoWrapper,

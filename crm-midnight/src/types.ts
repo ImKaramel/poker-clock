@@ -15,6 +15,7 @@ export interface ProfileType {
 }
 
 export interface GameType {
+  name: string,
   base_points: number,
   buyin: number,
   date: string,
