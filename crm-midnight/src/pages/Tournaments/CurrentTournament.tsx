@@ -21,6 +21,7 @@ import { InfoChip } from "../Main/styles";
 
 export default function CurrentTournament() {
   const { id } = useParams<{ id: string }>();
+   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState("");
   const [game, setGame] = useState<GameType>();
   const [upcomingGames, setUpcomingGames] = useState<number[]>([]);
