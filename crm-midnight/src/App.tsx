@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { useTelegram } from "./hooks/useTelegram";
 import { authAPI } from "./utils/api";
@@ -35,6 +35,17 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [initialRoute, setInitialRoute] = useState<string | null>(null);
+
+  const location = useLocation();
+
+const hideMenuRoutes = [
+  "/start",
+  "/useragreement",
+  "/welcome-page",
+  "/rating-page",
+];
+
+const hideMenu = hideMenuRoutes.includes(location.pathname);
 
   useEffect(() => {
     if (!user || !isTelegram || !isReady) return;
@@ -106,7 +117,7 @@ const App: React.FC = () => {
         )}
       </Routes>
 
-      <Menu />
+      {!hideMenu && <Menu />}
     </>
   );
 };
