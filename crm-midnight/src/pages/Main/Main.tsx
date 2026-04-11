@@ -221,7 +221,7 @@ export default function Main() {
           }}
         >
           <InfoTitle style={{ fontSize: "16px" }}>
-            {profile?.user?.first_name || "Игрок"}
+            {profile?.user?.nick_name || profile?.user?.first_name}
           </InfoTitle>
           <LineContainer>
             <ProgressBar style={{ width: `${calcWidth()}%` }} />

@@ -92,11 +92,11 @@ export default function RatingTable({ rows, currentUserId }: RatingTableProps) {
                       </Box>
                       <Avatar
                         src={row.user.photo_url}
-                        alt={row.user.username}
+                        alt="avatar"
                         sx={{ width: 22, height: 22 }}
                       />
                       <StyledTypography variant="body1" sx={{ color: "#fff!important", fontSize: '15px' }}>
-                        {row.user.first_name}
+                        {row.user.nick_name}
                       </StyledTypography>
                     </Stack>
                   </TableCell>

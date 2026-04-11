@@ -45,5 +45,6 @@ export interface RatingType {
     user_id: string,
     username: string
     photo_url: string
+    nick_name?: string
   }
 }
