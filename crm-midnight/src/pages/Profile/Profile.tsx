@@ -97,6 +97,7 @@ export default function Profile() {
     try {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const response = await profileAPI.updateProfile(updatedNickname);
+      console.log(updateNickname)
     } catch (err: any) {
       setError(err);
     }
