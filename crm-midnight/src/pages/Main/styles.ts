@@ -10,7 +10,7 @@ export const InfoChip = styled(Chip)({
     position: 'absolute',
     left: '40px',
     top: '116px',
-    width: '138px',
+    width: 'auto',
     height: '35px!important',
     borderRadius: '47px!important',
     padding: '10px 23px!important',

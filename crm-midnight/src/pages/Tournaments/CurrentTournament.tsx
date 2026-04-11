@@ -158,7 +158,7 @@ export default function CurrentTournament() {
         </RulesWrapper>
       </RulesContainer>
       <JoinButton onClick={Registry}>
-        {isRegistered ? "Вы зарегистрированы" : "Участвовать"}
+        {isRegistered ? "Отменить запись" : "Участвовать"}
       </JoinButton>
     </CurrentTournamentContainer>
   );

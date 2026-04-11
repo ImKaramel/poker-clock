@@ -105,16 +105,18 @@ export const TimeTitle = styled.div`
 `;
 
 export const CurrentTournamentContainer = styled.div`
-  width: 100%;
-  border-radius: 25px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background-color: #0B0B0B;
-`
+`;
 export const TitleContainer = styled.div`
   width: 100%;
   height: 388px;
   border-radius: 25px;
 `
 export const RulesContainer = styled.div`
+  flex: 1;
   width: 100%;
   height: 553px;
   border-radius: 25px;
@@ -173,15 +175,12 @@ export const WarningSubtitle = styled.div`
   color: #FFFFFF;
   margin-top: 17px;
 `
-export const JoinButton = styled.div`
-  width: 100%;
-  height: 85px;
-  border-radius: 25px;
-  background-color: #FEFEFE;
-  font-size: 22px;
+export const JoinButton = styled.button`
+  margin: 16px;
+  height: 56px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #000;
+  font-size: 16px;
   font-weight: 500;
-  color: #000000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`
+`;

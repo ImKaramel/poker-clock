@@ -3,7 +3,9 @@ import styled from "styled-components";
 
 export const SupportContainer = styled.div`
     width: 100%;
-    border-radius: 25px;
+    height: 100vh;
+    overflow-y: auto;
+    padding-bottom: 160px;
     background-color: #0B0B0B;
 `
 
