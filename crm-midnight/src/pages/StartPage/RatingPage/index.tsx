@@ -46,9 +46,9 @@ import { ReactComponent as Account } from "../../../assets/account.svg";
 import { ReactComponent as ArrowIcon } from "../../../assets/arrow_forward.svg";
 import { ReactComponent as ArrowNext } from "../../../assets/arrow_back_ios.svg";
 import { useNavigate } from "react-router-dom";
-const navigate = useNavigate();
 
 export default function RatingPage() {
+  const navigate = useNavigate();
   return (
     <StartPageContainer style={{height:'100vh'}}>
       <TitleContainer

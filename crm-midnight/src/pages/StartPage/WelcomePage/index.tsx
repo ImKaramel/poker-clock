@@ -19,8 +19,9 @@ import background from "../../../assets/startpage_background.svg";
 import { ReactComponent as ArrowIcon } from "../../../assets/arrow_forward.svg";
 import { ReactComponent as ArrowNext } from "../../../assets/arrow_back_ios.svg";
 import { useNavigate } from "react-router-dom";
-const navigate = useNavigate();
+
 export default function StartPage() {
+  const navigate = useNavigate();
   return (
     <StartPageContainer>
       <TitleContainer>
@@ -32,7 +33,10 @@ export default function StartPage() {
         </SubTitle>
       </TitleContainer>
       <BackgroundContainer>
-        <img src={background} style={{width: '100%', height: '100%', objectFit: 'cover'}}></img>
+        <img
+          src={background}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        ></img>
       </BackgroundContainer>
       <IndicatorContainer>
         <Indicator></Indicator>
@@ -57,7 +61,13 @@ export default function StartPage() {
               ></ArrowIcon>
             </ArrowButton>
           </ArrowContainer>
-          <RectangleText onClick={() => {navigate("/rating-page");}}>Старт</RectangleText>
+          <RectangleText
+            onClick={() => {
+              navigate("/rating-page");
+            }}
+          >
+            Старт
+          </RectangleText>
           <NextArrowsContainer>
             <NextArrow>
               <ArrowNext opacity="8%" />
