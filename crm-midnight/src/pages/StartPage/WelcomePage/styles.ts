@@ -38,7 +38,7 @@ export const SubTitle = styled.div`
 export const BackgroundContainer = styled.div`
     width: 100%;
     overflow: hidden;
-    height: 100vh;
+    height: calc(100vh - 222px);
 `
 export const IndicatorContainer = styled.div`
     position: absolute;

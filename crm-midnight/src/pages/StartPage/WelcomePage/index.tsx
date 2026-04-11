@@ -16,9 +16,10 @@ import {
   TitleContainer,
 } from "./styles";
 import background from "../../../assets/startpage_background.svg";
-import { ReactComponent as ArrowIcon } from "../../../assets/arrow_forward.svg";
+// import { ReactComponent as ArrowIcon } from "../../../assets/arrow_forward.svg";
 import { ReactComponent as ArrowNext } from "../../../assets/arrow_back_ios.svg";
 import { useNavigate } from "react-router-dom";
+import logo_button from '../../../assets/logo_on_button.jpg'
 
 export default function StartPage() {
   const navigate = useNavigate();
@@ -46,20 +47,21 @@ export default function StartPage() {
         <QuatroIndicator />
       </IndicatorContainer>
       <NavigationContainer>
-        <ArrowContainer>
+        {/* <ArrowContainer>
           <ArrowButton>
             <ArrowIcon width={16} height={16} color="white"></ArrowIcon>
           </ArrowButton>
-        </ArrowContainer>
+        </ArrowContainer> */}
         <RoundedRectangleContainer>
           <ArrowContainer style={{ backgroundColor: "#fff" }}>
             <ArrowButton>
-              <ArrowIcon
+              {/* <ArrowIcon
                 width={16}
                 height={16}
                 color="black"
                 transform="rotate(180)"
-              ></ArrowIcon>
+              ></ArrowIcon> */}
+              <img src={logo_button} style={{width: '16px', height: '16px'}}/>
             </ArrowButton>
           </ArrowContainer>
           <RectangleText
