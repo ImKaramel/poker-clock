@@ -95,9 +95,19 @@ export default function Profile() {
 
   const updateNickname = async () => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const response = await profileAPI.updateProfile(nick_name);
-      console.log(nick_name)
+      await profileAPI.updateProfile(nick_name);
+  
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              user: {
+                ...prev.user,
+                nick_name: nick_name,
+              },
+            }
+          : prev
+      );
     } catch (err: any) {
       setError(err);
     }
