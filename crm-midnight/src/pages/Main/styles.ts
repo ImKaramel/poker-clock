@@ -17,6 +17,7 @@ export const InfoChip = styled(Chip)({
     backgroundColor: 'rgb(36, 37, 40)!important',
     color: '#fff!important',
     fontSize: '18px!important',
+    opacity: '0.85'
 })
 
 export const MainAvatarContainer = styled.div`
