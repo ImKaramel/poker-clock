@@ -117,6 +117,7 @@ export default function Profile() {
                   <EditButton
                     onClick={() => setEdited(true)}
                     style={{ width: "100%", height: "100%" }}
+                    fill="#fff"
                   />
                 </EditButtonContainer>
               </div>
