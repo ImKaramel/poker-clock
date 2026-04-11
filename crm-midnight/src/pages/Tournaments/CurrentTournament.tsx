@@ -100,6 +100,7 @@ export default function CurrentTournament() {
     }
   };
   const isRegistered = game ? upcomingGames.includes(game.game_id) : false;
+  console.log(isRegistered)
   return (
     <CurrentTournamentContainer>
       <TitleContainer>
