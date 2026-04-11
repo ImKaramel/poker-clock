@@ -8,6 +8,7 @@ const Container = styled.div`
   color: white;
   display: flex;
   flex-direction: column;
+  width: 100%;
 `;
 
 const Content = styled.div`
