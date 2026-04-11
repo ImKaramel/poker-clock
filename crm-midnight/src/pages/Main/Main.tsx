@@ -183,7 +183,7 @@ export default function Main() {
               style={{
                 fontWeight: "500!important",
                 top: "151px",
-                width: "193px",
+                // width: "193px",
                 justifyContent: "flex-start",
               }}
             />
