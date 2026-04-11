@@ -33,7 +33,7 @@ import {
 } from "../Tournaments/styles";
 import { Calendar, Check, X } from "lucide-react";
 import { ReactComponent as Time } from "../../assets/time.svg";
-import butterfly from "../../assets/butterfly_tournament.png";
+import tournament_image from "../../assets/tournament_image.png";
 import { useEffect, useState } from "react";
 import { profileAPI, ratingAPI } from "../../utils/api";
 import { ProfileType, RatingType } from "../../types";
@@ -96,7 +96,7 @@ export default function Profile() {
   const updateNickname = async () => {
     try {
       await profileAPI.updateProfile(nick_name);
-  
+
       setProfile((prev) =>
         prev
           ? {
@@ -213,39 +213,40 @@ export default function Profile() {
           </TabContainer>
         </GameHistoryWrapper>
       </GameHistoryContainer>
-
-      <TournamentCardContainer>
-        <InfoCardContainer>
-          <TournamentName>Butterfly Tournament</TournamentName>
-          <TimeContainer>
-            <div
-              style={{
-                width: "12px",
-                height: "12px",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <Calendar />
-            </div>
-            <TimeTitle>5 марта</TimeTitle>
-          </TimeContainer>
-          <TimeContainer style={{ gridColumn: "2/3" }}>
-            <div
-              style={{
-                width: "12px",
-                height: "12px",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <Time />
-            </div>
-            <TimeTitle>19:00</TimeTitle>
-          </TimeContainer>
-        </InfoCardContainer>
-        <img src={butterfly} alt="img" />
-      </TournamentCardContainer>
+      {profile?.upcoming_games.map((item, index) => (
+        <TournamentCardContainer key={index}>
+          <InfoCardContainer>
+            <TournamentName>{item.name}</TournamentName>
+            <TimeContainer>
+              <div
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <Calendar />
+              </div>
+              <TimeTitle>{item.date}</TimeTitle>
+            </TimeContainer>
+            <TimeContainer style={{ gridColumn: "2/3" }}>
+              <div
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <Time />
+              </div>
+              <TimeTitle>{item.time}</TimeTitle>
+            </TimeContainer>
+          </InfoCardContainer>
+          <img src={tournament_image} alt="img" />
+        </TournamentCardContainer>
+      ))}
     </ProfileContainer>
   );
 }
