@@ -14,7 +14,7 @@ import {
 } from "./styles";
 import current_tournament from "../../assets/grand_opening.jpg";
 import { ReactComponent as Warning } from "../../assets/warning.svg";
-import { GameParticipant, GameType } from "../../types";
+import { GameType } from "../../types";
 import { gamesAPI, profileAPI } from "../../utils/api";
 import { useParams } from "react-router-dom";
 import { InfoChip } from "../Main/styles";
