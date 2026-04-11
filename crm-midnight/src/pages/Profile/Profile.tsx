@@ -112,12 +112,12 @@ export default function Profile() {
             {!edited ? (
               <InfoTitle>
                 {profile?.user?.first_name || "Игрок"}
-                <EditButton onClick={() => setEdited(true)} />
+                <EditButton onClick={() => setEdited(true)} style={{width: '100%', height: '100%'}} />
               </InfoTitle>
             ) : (
               <Wrapper>
                 <InputWrapper>
-                  <Input defaultValue="klu4" />
+                  <Input defaultValue="Ваш ник" />
                 </InputWrapper>
 
                 <Button>
