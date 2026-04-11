@@ -26,7 +26,7 @@ export const Subtitle = styled.p`
 `;
 
 export const Input = styled.input`
-  width: 100%;
+  width: calc(100% - 32px);
   padding: 16px;
   border-radius: 30px;
   border: 1px solid #333;
