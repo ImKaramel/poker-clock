@@ -128,7 +128,7 @@ export default function Profile() {
                 }}
               >
                 <InfoTitle style={{ width: "auto" }}>
-                  {profile?.user?.nickname || profile?.user?.first_name}
+                  {profile?.user?.nick_name || profile?.user?.first_name}
                 </InfoTitle>
                 <EditButtonContainer>
                   <EditButton

@@ -5,12 +5,12 @@ export interface ProfileType {
     first_name: string,
     is_admin: boolean,
     is_banned: boolean,
+    nick_name?: string
     points: number,
     total_games_played: number,
     user_id: string,
     username: string,
     photo_url: string,
-    nickname?: string
   }
 }
 
