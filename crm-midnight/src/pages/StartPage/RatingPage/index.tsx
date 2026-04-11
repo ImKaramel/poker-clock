@@ -41,7 +41,7 @@ import UserImage_1 from "../../../assets/userImage_1.jpg";
 import UserImage_2 from "../../../assets/userImage_2.png";
 import UserImage_3 from "../../../assets/userImage_3.jpg";
 import { ReactComponent as Lightning } from "../../../assets/lightning.svg";
-import { ReactComponent as Lightning_Gold } from "../../../assets/lightning_gold.svg";
+import { ReactComponent as LightningGold } from "../../../assets/lightning_gold.svg";
 import { ReactComponent as Account } from "../../../assets/account.svg";
 import { ReactComponent as ArrowIcon } from "../../../assets/arrow_forward.svg";
 import { ReactComponent as ArrowNext } from "../../../assets/arrow_back_ios.svg";
@@ -127,7 +127,7 @@ export default function RatingPage() {
                   >
                     1948
                   </PointsText>
-                  <Lightning_Gold />
+                  <LightningGold />
                 </PointsContainer>
               </PointsWrapper>
               <PointsWrapper>
