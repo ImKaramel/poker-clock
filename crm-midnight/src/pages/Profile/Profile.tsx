@@ -111,8 +111,8 @@ export default function Profile() {
           <Overlay />
           <InfoWrapper>
             {!edited ? (
-              <div style={{display: 'flex', alignItems: 'center', justifyContent:'flex-start'}}>
-                <InfoTitle>{profile?.user?.first_name || "Игрок"}</InfoTitle>
+              <div style={{display: 'flex', alignItems: 'baseline', justifyContent:'flex-start'}}>
+                <InfoTitle style={{width: 'auto'}}>{profile?.user?.first_name || "Игрок"}</InfoTitle>
                 <EditButtonContainer>
                   <EditButton
                     onClick={() => setEdited(true)}
