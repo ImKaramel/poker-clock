@@ -117,7 +117,7 @@ export default function CurrentTournament() {
           <RulesTitle>Описание</RulesTitle>
           <RulesSubTitle>{game?.name}</RulesSubTitle>
           <RulesTitle>Особенности</RulesTitle>
-          <RulesSubTitle>
+          <RulesSubTitle style={{ whiteSpace: "pre-line" }}>
             {game?.description}
             &bull; Гарантия рейтинговых очков: {game?.base_points}
           </RulesSubTitle>
