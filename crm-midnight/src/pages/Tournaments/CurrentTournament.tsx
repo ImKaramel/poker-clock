@@ -142,7 +142,7 @@ export default function CurrentTournament() {
           label={`Участников: ${countParticipant}`}
           style={{
             fontWeight: "500!important",
-            top: "151px",
+            top: "186px",
             // width: "193px",
             justifyContent: "flex-start",
           }}
