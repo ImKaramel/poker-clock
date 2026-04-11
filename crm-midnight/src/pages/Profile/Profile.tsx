@@ -111,7 +111,7 @@ export default function Profile() {
           <Overlay />
           <InfoWrapper>
             {!edited ? (
-              <>
+              <div style={{display: 'flex', alignItems: 'center', justifyContent:'flex-start'}}>
                 <InfoTitle>{profile?.user?.first_name || "Игрок"}</InfoTitle>
                 <EditButtonContainer>
                   <EditButton
@@ -119,7 +119,7 @@ export default function Profile() {
                     style={{ width: "100%", height: "100%" }}
                   />
                 </EditButtonContainer>
-              </>
+              </div>
             ) : (
               <Wrapper>
                 <InputWrapper>
