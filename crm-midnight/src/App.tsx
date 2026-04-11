@@ -47,8 +47,11 @@ const App: React.FC = () => {
         if (!response.data?.token) {
           throw new Error("No token in API response");
         }
-        if (response.data.isNew){
-          navigate('/start')
+        if (response.data.isNew) {
+          localStorage.setItem("auth_token", response.data.token);
+          setLoading(false);
+          navigate('/start', { replace: true });
+          return;
         }
 
         localStorage.setItem("auth_token", response.data.token);
