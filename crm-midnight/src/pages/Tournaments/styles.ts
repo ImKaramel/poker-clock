@@ -183,4 +183,5 @@ export const JoinButton = styled.button`
   color: #000;
   font-size: 16px;
   font-weight: 500;
+  margin-bottom: 100px;
 `;
