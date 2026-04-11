@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Routes, Route, HashRouter, Navigate } from "react-router-dom";
+import { Routes, Route, HashRouter, Navigate, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useTelegram } from "./hooks/useTelegram";
 import { authAPI } from "./utils/api";
@@ -11,6 +11,10 @@ import Profile from "./pages/Profile/Profile";
 import Main from "./pages/Main/Main";
 import Menu from "./pages/Menu/Menu";
 import Support from "./pages/Support/Support";
+import Welcome from "./pages/StartPage/MainPage";
+import UserAgreement from "./pages/StartPage/UserAgreement/UserAgreement";
+import StartPage from "./pages/StartPage/WelcomePage";
+import RatingPage from "./pages/StartPage/RatingPage";
 
 const Loader = styled.div`
   display: flex;
@@ -28,7 +32,7 @@ const App: React.FC = () => {
   const { user, isTelegram, isReady } = useTelegram();
   const [authError, setAuthError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const navigate = useNavigate()
   useEffect(() => {
     if (!user) return;
     if (!isTelegram) return;
@@ -42,6 +46,9 @@ const App: React.FC = () => {
 
         if (!response.data?.token) {
           throw new Error("No token in API response");
+        }
+        if (response.data.isNew){
+          navigate('/start')
         }
 
         localStorage.setItem("auth_token", response.data.token);
@@ -100,6 +107,10 @@ const App: React.FC = () => {
           <Route path="/games" element={<Schedule />} />
           <Route path="/games/:id" element={<CurrentTournament />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/start" element={<Welcome />} />
+          <Route path="/useragreement" element={<UserAgreement />} />
+          <Route path="/welcome-page" element={<StartPage />} />
+          <Route path="/rating-page" element={<RatingPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Menu />

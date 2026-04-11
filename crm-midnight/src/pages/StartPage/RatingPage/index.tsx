@@ -45,6 +45,8 @@ import { ReactComponent as Lightning_Gold } from "../../../assets/lightning_gold
 import { ReactComponent as Account } from "../../../assets/account.svg";
 import { ReactComponent as ArrowIcon } from "../../../assets/arrow_forward.svg";
 import { ReactComponent as ArrowNext } from "../../../assets/arrow_back_ios.svg";
+import { useNavigate } from "react-router-dom";
+const navigate = useNavigate();
 
 export default function RatingPage() {
   return (
@@ -196,7 +198,7 @@ export default function RatingPage() {
                 ></ArrowIcon>
               </ArrowButton>
             </ArrowContainer>
-            <RectangleText>Старт</RectangleText>
+            <RectangleText onClick={() => {navigate('/')}}>Старт</RectangleText>
             <NextArrowsContainer>
               <NextArrow>
                 <ArrowNext opacity="8%" />

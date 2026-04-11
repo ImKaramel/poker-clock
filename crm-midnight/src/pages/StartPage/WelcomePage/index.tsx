@@ -18,6 +18,8 @@ import {
 import background from "../../../assets/startpage_background.svg";
 import { ReactComponent as ArrowIcon } from "../../../assets/arrow_forward.svg";
 import { ReactComponent as ArrowNext } from "../../../assets/arrow_back_ios.svg";
+import { useNavigate } from "react-router-dom";
+const navigate = useNavigate();
 export default function StartPage() {
   return (
     <StartPageContainer>
@@ -55,7 +57,7 @@ export default function StartPage() {
               ></ArrowIcon>
             </ArrowButton>
           </ArrowContainer>
-          <RectangleText>Старт</RectangleText>
+          <RectangleText onClick={() => {navigate("/rating-page");}}>Старт</RectangleText>
           <NextArrowsContainer>
             <NextArrow>
               <ArrowNext opacity="8%" />
