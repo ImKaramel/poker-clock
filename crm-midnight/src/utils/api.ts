@@ -55,7 +55,7 @@ export const ratingAPI = {
 
 export const profileAPI = {
   getProfile: () => api.get('/profile'),
-  updateProfile: (data: any) => api.patch('/profile/', { data }),
+  updateProfile: (nick_name: string) => api.patch('/profile/', { nick_name }),
 };
 
 export const supportAPI = {
