@@ -115,11 +115,10 @@ export default function CurrentTournament() {
       <RulesContainer>
         <RulesWrapper>
           <RulesTitle>Описание</RulesTitle>
-          <RulesSubTitle>{game?.description}</RulesSubTitle>
+          <RulesSubTitle>{game?.name}</RulesSubTitle>
           <RulesTitle>Особенности</RulesTitle>
           <RulesSubTitle>
-            &bull; Re-entry ограничен: до 3 входов на игрока <br />
-            &bull; Без бонусных фишек и утилит <br />
+            {game?.description}
             &bull; Гарантия рейтинговых очков: {game?.base_points}
           </RulesSubTitle>
           <WarningContainer>

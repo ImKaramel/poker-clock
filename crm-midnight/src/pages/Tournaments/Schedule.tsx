@@ -54,7 +54,7 @@ export default function Schedule() {
           
         >
           <InfoCardContainer>
-            <TournamentName>{item.description}</TournamentName>
+            <TournamentName>{item.name}</TournamentName>
             <TimeContainer>
               <div
                 style={{
