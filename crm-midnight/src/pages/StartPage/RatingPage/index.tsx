@@ -185,13 +185,13 @@ export default function RatingPage() {
           <QuatroIndicator />
         </IndicatorContainer>
         <NavigationContainer>
-          <ArrowContainer>
+          {/* <ArrowContainer>
             <ArrowButton>
               <ArrowIcon width={16} height={16} color="white"></ArrowIcon>
             </ArrowButton>
-          </ArrowContainer>
+          </ArrowContainer> */}
           <RoundedRectangleContainer>
-            <ArrowContainer style={{ backgroundColor: "#fff" }}>
+            {/* <ArrowContainer style={{ backgroundColor: "#fff" }}>
               <ArrowButton>
                 <ArrowIcon
                   width={16}
@@ -200,7 +200,7 @@ export default function RatingPage() {
                   transform="rotate(180)"
                 ></ArrowIcon>
               </ArrowButton>
-            </ArrowContainer>
+            </ArrowContainer> */}
             <RectangleText onClick={() => {navigate('/')}}>Старт</RectangleText>
             <NextArrowsContainer>
               <NextArrow>
