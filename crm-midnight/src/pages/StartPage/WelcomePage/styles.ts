@@ -41,6 +41,8 @@ export const BackgroundContainer = styled.div`
     height: 100vh;
 `
 export const IndicatorContainer = styled.div`
+    position: absolute;
+    bottom: 131px;
     width: 63px;
     height: 5px;
     gap: 5px;
@@ -63,6 +65,8 @@ export const QuatroIndicator = styled.div`
 `
 
 export const NavigationContainer = styled.div`
+    position: absolute;
+    bottom: 47px;
     width: 334px;
     height: 66px;
     display: flex;
