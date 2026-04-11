@@ -26,7 +26,7 @@ export default function Welcome() {
 
   return (
     <Container>
-      <Title>ДОБРО ПОЖАЛОВАТЬ</Title>
+      <Title>ДОБРО ПОЖАЛОВАТЬ в  Midnight Club</Title>
       <Subtitle>Как к вам обращаться?</Subtitle>
 
       <Input
