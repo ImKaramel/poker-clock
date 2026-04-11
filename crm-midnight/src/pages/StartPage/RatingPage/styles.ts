@@ -1,5 +1,4 @@
 import styled from "styled-components";
-import { StartPageContainer } from "../WelcomePage/styles";
 import rating_background from "../../../assets/rating_background.png";
 
 export const BackgroundContainer = styled.div`
