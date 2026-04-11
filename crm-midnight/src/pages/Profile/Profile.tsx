@@ -31,7 +31,7 @@ import {
   TournamentCardContainer,
   TournamentName,
 } from "../Tournaments/styles";
-import { Calendar, Check, Cross } from "lucide-react";
+import { Calendar, Check, X } from "lucide-react";
 import { ReactComponent as Time } from "../../assets/time.svg";
 import butterfly from "../../assets/butterfly_tournament.png";
 import { useEffect, useState } from "react";
@@ -128,7 +128,7 @@ export default function Profile() {
                 </InputWrapper>
 
                 <Button>
-                  <Cross>✕</Cross>
+                  <X>✕</X>
                 </Button>
 
                 <Button>
