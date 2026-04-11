@@ -111,15 +111,15 @@ export default function Profile() {
           <Overlay />
           <InfoWrapper>
             {!edited ? (
-              <InfoTitle>
-                {profile?.user?.first_name || "Игрок"}
+              <>
+                <InfoTitle>{profile?.user?.first_name || "Игрок"}</InfoTitle>
                 <EditButtonContainer>
                   <EditButton
                     onClick={() => setEdited(true)}
                     style={{ width: "100%", height: "100%" }}
                   />
                 </EditButtonContainer>
-              </InfoTitle>
+              </>
             ) : (
               <Wrapper>
                 <InputWrapper>
