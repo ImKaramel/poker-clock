@@ -97,7 +97,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <HashRouter>
+    // <HashRouter>
       <>
         <Routes>
           <Route path="/" element={<Main />} />
@@ -115,7 +115,7 @@ const App: React.FC = () => {
         </Routes>
         <Menu />
       </>
-    </HashRouter>
+    // </HashRouter>
   );
 };
 
