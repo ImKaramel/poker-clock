@@ -2,6 +2,7 @@
 import {
   AvatarContainer,
   Button,
+  EditButtonContainer,
   GameHistoryContainer,
   GameHistoryTitle,
   GameHistoryWrapper,
@@ -112,7 +113,12 @@ export default function Profile() {
             {!edited ? (
               <InfoTitle>
                 {profile?.user?.first_name || "Игрок"}
-                <EditButton onClick={() => setEdited(true)} style={{width: '100%', height: '100%'}} />
+                <EditButtonContainer>
+                  <EditButton
+                    onClick={() => setEdited(true)}
+                    style={{ width: "100%", height: "100%" }}
+                  />
+                </EditButtonContainer>
               </InfoTitle>
             ) : (
               <Wrapper>
