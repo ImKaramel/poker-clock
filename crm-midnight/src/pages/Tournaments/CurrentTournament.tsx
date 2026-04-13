@@ -25,7 +25,11 @@ export default function CurrentTournament() {
   const [error, setError] = useState("");
   const [game, setGame] = useState<GameType>();
   const [upcomingGames, setUpcomingGames] = useState<number[]>([]);
-  const [countParticipant, setCountParticipant] = useState<number>(0)
+  const [countParticipant, setCountParticipant] = useState<number>(0);
+
+  const soldOut = 115;
+  const participantsCount = game?.participants_count ?? 0;
+  const isFull = participantsCount >= soldOut;
 
   const formatTime = (timeStr: string) => {
     if (timeStr && timeStr.includes(":")) {
@@ -81,11 +85,10 @@ export default function CurrentTournament() {
     const getCountParticipants = async () => {
       try {
         if (!id) return;
-    
+
         const response = await gamesAPI.getParticipantsAdmin(parseInt(id));
-    
+
         setCountParticipant(response.data.length); // 👈 ВОТ ЭТО ГЛАВНОЕ
-    
       } catch (err: any) {
         setError(err);
       }
@@ -179,8 +182,19 @@ export default function CurrentTournament() {
           </WarningContainer>
         </RulesWrapper>
       </RulesContainer>
-      <JoinButton onClick={Registry}>
-        {isRegistered ? "Отменить запись" : "Участвовать"}
+      <JoinButton
+        onClick={Registry}
+        disabled={isFull && !isRegistered}
+        style={{
+          opacity: isFull && !isRegistered ? 0.5 : 1,
+          cursor: isFull && !isRegistered ? "not-allowed" : "pointer",
+        }}
+      >
+        {isFull && !isRegistered
+          ? "Мест нет"
+          : isRegistered
+          ? "Отменить запись"
+          : "Участвовать"}
       </JoinButton>
     </CurrentTournamentContainer>
   );
