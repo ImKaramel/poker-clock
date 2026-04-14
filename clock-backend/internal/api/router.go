@@ -45,7 +45,7 @@ func NewRouter(
 			r.Post("/pause", timerHandler.PauseTournament)
 			r.Post("/resume", timerHandler.ResumeTournament)
 			r.Post("/next", timerHandler.NextLevel)
-			r.Post("/tournaments/{id}/stats", timerHandler.UpdateStats)
+			r.Post("/stats", timerHandler.UpdateStats)
 		})
 	})
 

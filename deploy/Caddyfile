@@ -19,5 +19,6 @@ api.midnight-club-app.ru {
         respond @options 204
 
         reverse_proxy app-backend:8080
+        reverse_proxy /clock/* clock-backend:8081
 }
 

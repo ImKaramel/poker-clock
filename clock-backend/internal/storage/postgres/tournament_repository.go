@@ -28,9 +28,9 @@ func (r *TournamentRepository) Create(ctx context.Context, t *domain.Tournament)
 	}
 
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO tournaments (id, name)
-		 VALUES ($1, $2)`,
-		t.ID, t.Name,
+		`INSERT INTO tournaments (id, name, state)
+     			VALUES ($1, $2, $3)`,
+		t.ID, t.Name, "stopped",
 	)
 	if err != nil {
 		return fmt.Errorf("insert tournament: %w", err)
@@ -44,7 +44,7 @@ func (r *TournamentRepository) Get(ctx context.Context, id string) (*domain.Tour
 		t domain.Tournament
 	)
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, name, owner_id, created_at
+		`SELECT id, name, created_at
 		 FROM tournaments WHERE id = $1`,
 		id,
 	).Scan(&t.ID, &t.Name, &t.CreatedAt)

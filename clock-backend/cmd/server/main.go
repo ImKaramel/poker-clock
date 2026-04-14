@@ -45,7 +45,7 @@ func main() {
 	r := api.NewRouter(tournamentService, timerService, timerManager)
 
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":8081",
 		Handler: r,
 	}
 

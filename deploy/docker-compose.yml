@@ -76,6 +76,25 @@ services:
     networks:
       - app-network
 
+  clock-backend:
+    build:
+      context: ../clock-backend
+    container_name: clock-backend
+    restart: always
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/poker?sslmode=disable
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      PORT: 8081
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    expose:
+      - "8081"
+    networks:
+      - app-network
+
 volumes:
   db_data:
   caddy_data:
@@ -84,51 +103,3 @@ volumes:
 networks:
   app-network:
     driver: bridge
-
-#services:
-#  db:
-#    image: postgres:16-alpine
-#    container_name: poker-db
-#    environment:
-#      POSTGRES_DB: poker
-#      POSTGRES_USER: postgres
-#      POSTGRES_PASSWORD: postgres
-#    ports:
-#      - "5432:5432"
-#    volumes:
-#      - db_data:/var/lib/postgresql/data
-#    healthcheck:
-#      test: ["CMD-SHELL", "pg_isready -U postgres -d poker"]
-#      interval: 5s
-#      timeout: 5s
-#      retries: 10
-#
-#  app-backend:
-#    build:
-#      context: ../app-backend
-#    container_name: app-backend
-#    environment:
-#      DATABASE_URL: postgres://postgres:postgres@db:5432/poker?sslmode=disable
-#      JWT_SECRET: supersecret
-#    depends_on:
-#      db:
-#        condition: service_healthy
-#    ports:
-#      - "8080:8080"
-#
-##  clock-backend:
-##    build:
-##      context: ../clock-backend
-##    container_name: clock-backend
-##    environment:
-##      DATABASE_URL: postgres://postgres:postgres@db:5432/poker?sslmode=disable
-##    depends_on:
-##      db:
-##        condition: service_healthy
-##    ports:
-##      - "8081:8081"
-#
-#volumes:
-#  db_data:
-
- # scp -f /Users/assistentka_professora/Desktop/poker-clock/telegram-bot root@85.239.63.25:/backend

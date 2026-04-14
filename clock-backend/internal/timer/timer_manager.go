@@ -53,7 +53,7 @@ type manager struct {
 
 func NewManager(parent context.Context, tournaments repository.TournamentRepository, timers repository.TimerRepository) Manager {
 	ctx, cancel := context.WithCancel(parent)
-	return &manager{
+	m := &manager{
 		tournamentRepo: tournaments,
 		timerRepo:      timers,
 		timers:         make(map[string]*tournamentTimer),
@@ -62,6 +62,11 @@ func NewManager(parent context.Context, tournaments repository.TournamentReposit
 		ctx:            ctx,
 		cancel:         cancel,
 	}
+
+	// Restore active timers on startup
+	go m.RestoreTimers(ctx)
+
+	return m
 }
 
 func (m *manager) UpdateStats(tournamentID string, players int, chips int) {
@@ -90,7 +95,7 @@ func (m *manager) StartTournamentTimer(ctx context.Context, tournamentID string)
 	m.mu.Lock()
 	if _, ok := m.timers[tournamentID]; ok {
 		m.mu.Unlock()
-		return nil
+		return fmt.Errorf("timer for tournament %s is already running", tournamentID)
 	}
 	m.mu.Unlock()
 
@@ -160,10 +165,9 @@ func (m *manager) PauseTournamentTimer(tournamentID string) error {
 	tt, ok := m.timers[tournamentID]
 	m.mu.RUnlock()
 	if !ok {
-		return nil
+		return fmt.Errorf("timer for tournament %s not found", tournamentID)
 	}
-	tt.pause()
-	return nil
+	return tt.pause()
 }
 
 func (m *manager) ResumeTournamentTimer(tournamentID string) error {
@@ -171,10 +175,9 @@ func (m *manager) ResumeTournamentTimer(tournamentID string) error {
 	tt, ok := m.timers[tournamentID]
 	m.mu.RUnlock()
 	if !ok {
-		return nil
+		return fmt.Errorf("timer for tournament %s not found", tournamentID)
 	}
-	tt.resume()
-	return nil
+	return tt.resume()
 }
 
 func (m *manager) NextLevel(tournamentID string) error {
@@ -262,13 +265,71 @@ func (m *manager) Subscribe(tournamentID string) (<-chan ViewState, func(), erro
 
 func (m *manager) publish(tournamentID string, state ViewState) {
 	m.subsMu.RLock()
-	defer m.subsMu.RUnlock()
-
+	subs := make([]chan ViewState, 0, len(m.subscribers[tournamentID]))
 	for ch := range m.subscribers[tournamentID] {
-		select {
-		case ch <- state:
-		default:
+		subs = append(subs, ch)
+	}
+	m.subsMu.RUnlock()
+
+	// Fan-out to each subscriber in a separate goroutine to prevent blocking
+	for _, ch := range subs {
+		go func(subscriber chan ViewState) {
+			select {
+			case subscriber <- state:
+			default:
+				// Skip slow subscribers
+			}
+		}(ch)
+	}
+}
+
+func (m *manager) RestoreTimers(ctx context.Context) {
+	timerStates, err := m.timerRepo.GetAllTimerStates(ctx)
+	if err != nil {
+		// Log error but don't fail startup
+		return
+	}
+
+	for _, timerState := range timerStates {
+		// Only restore timers that are not stopped
+		if timerState.State == "stopped" {
+			continue
 		}
+
+		t, err := m.tournamentRepo.Get(ctx, timerState.TournamentID)
+		if err != nil || t == nil {
+			continue // Skip invalid tournaments
+		}
+		if len(t.Levels) == 0 {
+			continue // Skip tournaments without levels
+		}
+
+		// Validate and fix timer state
+		if timerState.CurrentLevelIndex < 0 {
+			timerState.CurrentLevelIndex = 0
+		}
+		if timerState.CurrentLevelIndex >= len(t.Levels) {
+			timerState.CurrentLevelIndex = len(t.Levels) - 1
+		}
+		if timerState.RemainingSeconds <= 0 {
+			timerState.RemainingSeconds = t.Levels[timerState.CurrentLevelIndex].DurationMinutes * 60
+		}
+
+		// Create and start the timer
+		tt := newTournamentTimer(m.ctx, timerState.TournamentID, t.Levels, timerState.CurrentLevelIndex, timerState.RemainingSeconds, timerState.State, timerState.LevelStartedAt,
+			func(state ViewState) {
+				m.publish(timerState.TournamentID, state)
+			},
+			func(s *domain.TimerState) error {
+				return m.timerRepo.UpdateTimerState(context.Background(), s)
+			},
+		)
+
+		m.mu.Lock()
+		m.timers[timerState.TournamentID] = tt
+		m.mu.Unlock()
+
+		go tt.run()
 	}
 }
 

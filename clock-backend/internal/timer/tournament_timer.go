@@ -2,6 +2,7 @@ package timer
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -110,14 +111,14 @@ func (t *tournamentTimer) currentStateLocked() ViewState {
 	}
 }
 
-func (t *tournamentTimer) pause() {
+func (t *tournamentTimer) pause() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.timerState != "running" {
-		return
+		return fmt.Errorf("cannot pause timer: timer is not running (current state: %s)", t.timerState)
 	}
 	t.timerState = "paused"
-	_ = t.persist(&domain.TimerState{
+	return t.persist(&domain.TimerState{
 		TournamentID:      t.id,
 		CurrentLevelIndex: t.currentLevelIdx,
 		RemainingSeconds:  t.remaining,
@@ -126,14 +127,14 @@ func (t *tournamentTimer) pause() {
 	})
 }
 
-func (t *tournamentTimer) resume() {
+func (t *tournamentTimer) resume() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.timerState != "paused" {
-		return
+		return fmt.Errorf("cannot resume timer: timer is not paused (current state: %s)", t.timerState)
 	}
 	t.timerState = "running"
-	_ = t.persist(&domain.TimerState{
+	return t.persist(&domain.TimerState{
 		TournamentID:      t.id,
 		CurrentLevelIndex: t.currentLevelIdx,
 		RemainingSeconds:  t.remaining,

@@ -11,7 +11,7 @@ func RunMigrations(ctx context.Context, db *DB) error {
 		`CREATE TABLE IF NOT EXISTS tournaments (
 			id UUID PRIMARY KEY,
 			name TEXT NOT NULL,
-			state TEXT NOT NULL,
+			state TEXT NOT NULL DEFAULT 'stopped',
 			current_level_index INT NOT NULL DEFAULT -1,
 			level_started_at TIMESTAMP,
 			remaining_seconds INT,
