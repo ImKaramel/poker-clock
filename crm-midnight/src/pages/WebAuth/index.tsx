@@ -9,31 +9,7 @@ const WebAuth: React.FC = () => {
   useEffect(() => {
     console.log("WebAuth component mounted");
 
-    // callback обязательно на window
-    (window as any).onTelegramAuth = async (user: any) => {
-      console.log("Telegram auth callback triggered", user);
-      try {
-        const res = await fetch("/api/auth/telegram/callback", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(user),
-        });
-
-        const data = await res.json();
-        console.log("Auth response:", data);
-
-        localStorage.setItem("auth_token", data.token);
-        
-        // Используем React Router для навигации без перезагрузки
-        navigate("/");
-      } catch (error) {
-        console.error("Auth error:", error);
-        alert("Auth error");
-      }
-    };
-
+    // Убираем onTelegramAuth, используем data-auth-url
     const container = document.getElementById("tg-login");
     console.log("Container found:", container);
 
@@ -56,8 +32,9 @@ const WebAuth: React.FC = () => {
     script.async = true;
     script.setAttribute("data-telegram-login", "Midnight_poker_bot");
     script.setAttribute("data-size", "large");
-    script.setAttribute("data-onauth", "onTelegramAuth(user)");
+    script.setAttribute("data-auth-url", "https://api.midnight-club-app.ru/api/auth/telegram/callback");
     script.setAttribute("data-request-access", "write");
+    script.setAttribute("data-radius", "10");
 
     script.onload = () => {
       console.log("Telegram widget script loaded successfully");
@@ -66,7 +43,7 @@ const WebAuth: React.FC = () => {
     script.onerror = (error) => {
       console.error("Failed to load Telegram widget:", error);
       container.innerHTML =
-        '<div style="color: red; padding: 20px;">❌ Ошибка загрузки виджета Telegram. Проверьте интернет-соединение.</div>';
+        '<div style="color: red; padding: 20px;">❌ Ошибка загрузки виджета Telegram</div>';
     };
 
     console.log("Appending script to container");
@@ -76,7 +53,7 @@ const WebAuth: React.FC = () => {
     return () => {
       console.log("WebAuth component unmounting");
     };
-  }, [navigate]);
+  }, []);
 
   return (
     <div
@@ -99,9 +76,9 @@ const WebAuth: React.FC = () => {
           borderRadius: "10px",
           position: "relative",
           overflow: "hidden",
+          minHeight: "300px",
         }}
       >
-        {/* Фоновое изображение - повернутое */}
         <div
           style={{
             position: "absolute",
@@ -112,12 +89,12 @@ const WebAuth: React.FC = () => {
             backgroundImage: `url(${background})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
+            transform: "rotate(90deg) scale(1.4)",
             transformOrigin: "center",
             zIndex: 0,
           }}
         />
         
-        {/* Затемнение для читаемости */}
         <div
           style={{
             position: "absolute",
@@ -125,12 +102,11 @@ const WebAuth: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backgroundColor: "rgba(0, 0, 0, 0.6)",
             zIndex: 1,
           }}
         />
 
-        {/* Контейнер с кнопкой */}
         <div
           style={{
             position: "relative",
@@ -160,10 +136,6 @@ const WebAuth: React.FC = () => {
         >
           📱 Открыть бота в Telegram
         </a>
-      </div>
-
-      <div style={{ marginTop: 20, fontSize: 12, opacity: 0.7 }}>
-        Если кнопка не появилась через 10 секунд, проверьте консоль (F12)
       </div>
     </div>
   );
