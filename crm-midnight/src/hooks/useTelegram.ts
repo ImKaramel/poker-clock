@@ -2,17 +2,22 @@ import { useEffect, useState } from "react";
 
 export const useTelegram = () => {
   const [webApp, setWebApp] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<any>(undefined);
+  const [isTelegram, setIsTelegram] = useState<boolean>(false);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
 
+    // 🌐 BROWSER MODE
     if (!tg) {
-      // 👉 браузер
+      setIsTelegram(false);
       setIsReady(true);
       return;
     }
+
+    // 📱 TELEGRAM MODE
+    setIsTelegram(true);
 
     tg.ready();
     tg.expand();
@@ -31,6 +36,7 @@ export const useTelegram = () => {
 
     const timeout = setTimeout(() => {
       console.warn("⚠️ Telegram user timeout");
+      setUser(null);
       setIsReady(true);
       clearInterval(interval);
     }, 3000);
@@ -44,7 +50,7 @@ export const useTelegram = () => {
   return {
     webApp,
     user,
+    isTelegram,
     isReady,
-    isTelegram: !!webApp, // ✅ фикс
   };
 };
