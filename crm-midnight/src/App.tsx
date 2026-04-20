@@ -71,7 +71,7 @@ const App: React.FC = () => {
   }
 
   // 📱 LOADING ONLY FOR TELEGRAM
-  if (!isReady || !isTelegram || !user) {
+  if (!isReady || (isTelegram && user)) {
     return (
       <Loader>
         <div>⏳ Загрузка...</div>
