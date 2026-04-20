@@ -4,7 +4,7 @@ import background from "../../assets/background.jpg";
 
 const WebAuth: React.FC = () => {
   const isScriptLoaded = useRef(false);
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   useEffect(() => {
     console.log("WebAuth component mounted");
