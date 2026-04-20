@@ -39,31 +39,27 @@ const App: React.FC = () => {
 
   const location = useLocation();
 
-const hideMenuRoutes = [
-  "/start",
-  "/useragreement",
-  "/welcome-page",
-  "/rating-page",
-];
+  const hideMenuRoutes = [
+    "/start",
+    "/useragreement",
+    "/welcome-page",
+    "/rating-page",
+  ];
 
-const hideMenu = hideMenuRoutes.includes(location.pathname);
+  const hideMenu = hideMenuRoutes.includes(location.pathname);
 
   useEffect(() => {
     if (!isReady) return;
 
+    // 🌐 НЕ Telegram → web auth
     if (!isTelegram) {
       setInitialRoute("/web-auth");
       setLoading(false);
       return;
     }
 
-    if (user === undefined) return;
-    if (user === null) {
-      setAuthError("Telegram user not found");
-      setLoading(false);
-      return;
-    }
-
+    // 📱 Telegram → ждём user
+    if (!user) return;
 
     if (!user || !isTelegram || !isReady) return;
 
@@ -79,7 +75,6 @@ const hideMenu = hideMenuRoutes.includes(location.pathname);
 
         // 👇 ВАЖНО: решаем маршрут ДО рендера
         setInitialRoute(response.data.isNew ? "/start" : "/");
-
       } catch (e: any) {
         setAuthError(e.message);
       } finally {
@@ -106,9 +101,7 @@ const hideMenu = hideMenuRoutes.includes(location.pathname);
       <Loader>
         <h2>❌ Ошибка авторизации</h2>
         <p>{authError}</p>
-        <button onClick={() => window.location.reload()}>
-          Перезапустить
-        </button>
+        <button onClick={() => window.location.reload()}>Перезапустить</button>
       </Loader>
     );
   }
