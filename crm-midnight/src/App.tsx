@@ -33,7 +33,9 @@ const Loader = styled.div`
 const App: React.FC = () => {
   const { user, isTelegram, isReady } = useTelegram();
 
+  const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [initialRoute, setInitialRoute] = useState<string | null>(null);
 
   const location = useLocation();
 
@@ -46,46 +48,61 @@ const App: React.FC = () => {
 
   const hideMenu = hideMenuRoutes.includes(location.pathname);
 
-  // 📡 AUTH LOGIC (HOOK ВСЕГДА ВЫЗЫВАЕТСЯ)
   useEffect(() => {
-    if (!isTelegram || !user) return;
+    if (!isReady) return;
+
+    // 🌐 НЕ Telegram → web auth
+    if (!isTelegram) {
+      setInitialRoute("/web-auth");
+      setLoading(false);
+      return;
+    }
+
+    // 📱 Telegram → ждём user
+    if (!user) return;
+
+    if (!user || !isTelegram || !isReady) return;
+    console.log("telegram", isTelegram)
 
     const runAuth = async () => {
       try {
         const response = await authAPI.telegramInitAuth({ user });
 
+        if (!response.data?.token) {
+          throw new Error("No token in API response");
+        }
+
         localStorage.setItem("auth_token", response.data.token);
+
+        // 👇 ВАЖНО: решаем маршрут ДО рендера
+        setInitialRoute(response.data.isNew ? "/start" : "/");
       } catch (e: any) {
         setAuthError(e.message);
+      } finally {
+        setLoading(false);
       }
     };
 
     runAuth();
-  }, [user, isTelegram]);
+  }, [user, isTelegram, isReady]);
 
-  // 🌐 BROWSER REDIRECT (логика после hooks)
-  if (isReady && !isTelegram) {
-    return <Navigate to="/web-auth" replace />;
-  }
-
-  // 📱 LOADING STATE
-  if (!isReady || (isTelegram && !user)) {
+  if (loading) {
     return (
       <Loader>
         <div>⏳ Загрузка...</div>
         <div style={{ fontSize: 14, opacity: 0.7 }}>
-          Ожидание Telegram WebApp…
+          {isTelegram ? "Ожидание Telegram WebApp…" : "Ожидание…"}
         </div>
       </Loader>
     );
   }
 
-  // ❌ ERROR
   if (authError) {
     return (
       <Loader>
         <h2>❌ Ошибка авторизации</h2>
         <p>{authError}</p>
+        <button onClick={() => window.location.reload()}>Перезапустить</button>
       </Loader>
     );
   }
@@ -106,10 +123,15 @@ const App: React.FC = () => {
         <Route path="/welcome-page" element={<StartPage />} />
         <Route path="/rating-page" element={<RatingPage />} />
         <Route path="/web-auth" element={<WebAuth />} />
+
+        {initialRoute && (
+          <Route path="*" element={<Navigate to={initialRoute} replace />} />
+        )}
       </Routes>
 
       {!hideMenu && <Menu />}
     </>
   );
 };
+
 export default App;
