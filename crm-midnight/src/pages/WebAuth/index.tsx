@@ -95,7 +95,6 @@ const WebAuth: React.FC = () => {
           borderRadius: "10px",
           position: "relative",
           overflow: "hidden",
-          minHeight: "300px",
         }}
       >
         {/* Фоновое изображение - повернутое */}
