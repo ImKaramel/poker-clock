@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import background from "../../assets/2026-04-20 22.33.10.jpg";
+import background from "../../assets/background.jpg";
 
 const WebAuth: React.FC = () => {
   const isScriptLoaded = useRef(false);
