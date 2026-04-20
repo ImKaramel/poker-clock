@@ -98,24 +98,59 @@ const WebAuth: React.FC = () => {
           padding: "20px",
           border: "1px solid #333",
           borderRadius: "10px",
-          backgroundImage: background,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          transform: "rotate(90deg) scale(1.4)",
-          transformOrigin: "center",
-          zIndex: 0,
+          position: "relative",
+          overflow: "hidden",
+          minHeight: "300px",
         }}
       >
+        {/* Фоновое изображение - повернутое */}
         <div
-          id="tg-login"
           style={{
-            display: "flex",
-            justifyContent: "center",
-            minHeight: "100px",
-            alignItems: "center",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundImage: `url(${background})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            transform: "rotate(90deg) scale(1.4)",
+            transformOrigin: "center",
+            zIndex: 0,
+          }}
+        />
+        
+        {/* Затемнение для читаемости */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 1,
+          }}
+        />
+
+        {/* Контейнер с кнопкой - не поворачивается */}
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
           }}
         >
-          <div>Загрузка кнопки входа...</div>
+          <div
+            id="tg-login"
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              minHeight: "100px",
+              alignItems: "center",
+            }}
+          >
+            <div>Загрузка кнопки входа...</div>
+          </div>
         </div>
       </div>
 
