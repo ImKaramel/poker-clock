@@ -58,8 +58,6 @@ const hideMenu = hideMenuRoutes.includes(location.pathname);
     }
 
     if (!user) {
-      setAuthError("Telegram user not found");
-      setLoading(false);
       return;
     }
 
