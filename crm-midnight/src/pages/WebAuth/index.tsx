@@ -1,13 +1,12 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import background from "../../assets/background.jpg";
 
 const WebAuth: React.FC = () => {
-  const isScriptLoaded = useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ САМОЕ ВАЖНОЕ: обрабатываем параметры URL при загрузке
+  // Обрабатываем параметры URL при загрузке
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const token = urlParams.get('token');
@@ -29,7 +28,7 @@ const WebAuth: React.FC = () => {
     }
   }, [location, navigate]);
 
-  // Загружаем виджет только если нет токена в URL
+  // Загружаем виджет Telegram
   useEffect(() => {
     // Если уже есть токен в URL, не загружаем виджет заново
     const urlParams = new URLSearchParams(location.search);
@@ -39,15 +38,21 @@ const WebAuth: React.FC = () => {
     
     console.log("Loading Telegram widget...");
     const container = document.getElementById("tg-login");
-    if (!container) return;
+    if (!container) {
+      console.error("Container 'tg-login' not found");
+      return;
+    }
 
+    // Очищаем контейнер перед загрузкой
     container.innerHTML = "";
 
+    // Удаляем старые скрипты, чтобы избежать конфликтов
     const existingScripts = document.querySelectorAll(
       'script[src*="telegram-widget.js"]'
     );
     existingScripts.forEach((script) => script.remove());
 
+    // Создаем новый скрипт
     const script = document.createElement("script");
     script.src = "https://telegram.org/js/telegram-widget.js?22";
     script.async = true;
@@ -58,11 +63,19 @@ const WebAuth: React.FC = () => {
     script.setAttribute("data-radius", "10");
 
     script.onerror = () => {
+      console.error("Failed to load Telegram widget");
       container.innerHTML = '<div style="color: red; padding: 20px;">❌ Ошибка загрузки виджета Telegram</div>';
     };
 
     container.appendChild(script);
-  }, [location.search]); // Добавили зависимость от location.search
+    
+    // Очистка при размонтировании
+    return () => {
+      if (container) {
+        container.innerHTML = "";
+      }
+    };
+  }, [location.search]); // Зависимость от location.search
 
   return (
     <div
@@ -88,13 +101,26 @@ const WebAuth: React.FC = () => {
           backdropFilter: "blur(5px)",
         }}
       >
-        <div id="tg-login" style={{ display: "flex", justifyContent: "center", minHeight: "100px", alignItems: "center" }}>
+        <div 
+          id="tg-login" 
+          style={{ 
+            display: "flex", 
+            justifyContent: "center", 
+            minHeight: "100px", 
+            alignItems: "center" 
+          }}
+        >
           <div>Загрузка кнопки входа...</div>
         </div>
       </div>
 
       <div>
-        <a href="https://t.me/Midnight_poker_bot" target="_blank" rel="noopener noreferrer" style={{ color: "#24A1DE" }}>
+        <a 
+          href="https://t.me/Midnight_poker_bot" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          style={{ color: "#24A1DE" }}
+        >
           📱 Открыть бота в Telegram
         </a>
       </div>
