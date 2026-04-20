@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import background from '../../assets/2026-04-20 22.33.10.jpg'
 
 const WebAuth: React.FC = () => {
   const isScriptLoaded = useRef(false);
@@ -82,7 +83,8 @@ const WebAuth: React.FC = () => {
       color: "white",
       minHeight: "100vh",
       background: "black",
-      padding: "20px"
+      padding: "20px",
+      position: "relative"
     }}>
       <h2>Вход через Telegram</h2>
       
@@ -90,15 +92,47 @@ const WebAuth: React.FC = () => {
         margin: "30px 0",
         padding: "20px",
         border: "1px solid #333",
-        borderRadius: "10px"
+        borderRadius: "10px",
+        position: "relative",
+        overflow: "hidden",
+        minHeight: "300px"
       }}>
-        <div id="tg-login" style={{ 
-          display: "flex", 
-          justifyContent: "center",
-          minHeight: "100px",
-          alignItems: "center"
-        }}>
-          <div>Загрузка кнопки входа...</div>
+        {/* Фоновое изображение повернутое на 90 градусов и растянутое */}
+        <div style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage: `url(${background})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          transform: "rotate(90deg) scale(1.4)",
+          transformOrigin: "center",
+          zIndex: 0
+        }} />
+        
+        {/* Затемнение для лучшей читаемости текста */}
+        <div style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          zIndex: 1
+        }} />
+        
+        {/* Контент поверх фона */}
+        <div style={{ position: "relative", zIndex: 2 }}>
+          <div id="tg-login" style={{ 
+            display: "flex", 
+            justifyContent: "center",
+            minHeight: "100px",
+            alignItems: "center"
+          }}>
+            <div>Загрузка кнопки входа...</div>
+          </div>
         </div>
       </div>
 
