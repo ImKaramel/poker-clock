@@ -1,13 +1,15 @@
 import React, { useEffect, useRef } from "react";
-// Для JPG/PNG изображений в React
-import background from "../../assets/background.jpg";
+import { useNavigate } from "react-router-dom";
+import background from "../../assets/2026-04-20 22.33.10.jpg";
 
 const WebAuth: React.FC = () => {
   const isScriptLoaded = useRef(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     console.log("WebAuth component mounted");
 
+    // callback обязательно на window
     (window as any).onTelegramAuth = async (user: any) => {
       console.log("Telegram auth callback triggered", user);
       try {
@@ -23,7 +25,9 @@ const WebAuth: React.FC = () => {
         console.log("Auth response:", data);
 
         localStorage.setItem("auth_token", data.token);
-        window.location.href = "/";
+        
+        // Используем React Router для навигации без перезагрузки
+        navigate("/");
       } catch (error) {
         console.error("Auth error:", error);
         alert("Auth error");
@@ -72,7 +76,7 @@ const WebAuth: React.FC = () => {
     return () => {
       console.log("WebAuth component unmounting");
     };
-  }, []);
+  }, [navigate]);
 
   return (
     <div
