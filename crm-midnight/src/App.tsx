@@ -16,6 +16,7 @@ import Welcome from "./pages/StartPage/MainPage";
 import UserAgreement from "./pages/StartPage/UserAgreement/UserAgreement";
 import StartPage from "./pages/StartPage/WelcomePage";
 import RatingPage from "./pages/StartPage/RatingPage";
+import WebAuth from "./pages/WebAuth";
 
 const Loader = styled.div`
   display: flex;
@@ -48,6 +49,20 @@ const hideMenuRoutes = [
 const hideMenu = hideMenuRoutes.includes(location.pathname);
 
   useEffect(() => {
+    if (!isReady) return;
+
+    if (!isTelegram) {
+      setInitialRoute("/web-auth");
+      setLoading(false);
+      return;
+    }
+
+    if (!user) {
+      setAuthError("Telegram user not found");
+      setLoading(false);
+      return;
+    }
+
     if (!user || !isTelegram || !isReady) return;
 
     const runAuth = async () => {
@@ -111,6 +126,7 @@ const hideMenu = hideMenuRoutes.includes(location.pathname);
         <Route path="/useragreement" element={<UserAgreement />} />
         <Route path="/welcome-page" element={<StartPage />} />
         <Route path="/rating-page" element={<RatingPage />} />
+        <Route path="/web-auth" element={<WebAuth />} />
 
         {initialRoute && (
           <Route path="*" element={<Navigate to={initialRoute} replace />} />

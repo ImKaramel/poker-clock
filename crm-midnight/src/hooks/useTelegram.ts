@@ -2,35 +2,35 @@ import { useEffect, useState } from "react";
 
 export const useTelegram = () => {
   const [webApp, setWebApp] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);           // ← меняем название и тип
+  const [user, setUser] = useState<any>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
-    if (!tg) return;
 
-    console.log("Telegram WebApp initDataUnsafe.user:", tg.initDataUnsafe?.user);
+    if (!tg) {
+      // 👉 браузер
+      setIsReady(true);
+      return;
+    }
 
     tg.ready();
     tg.expand();
 
     setWebApp(tg);
 
-    // Пуллинг на случай задержки Telegram
     const interval = setInterval(() => {
       const tgUser = tg.initDataUnsafe?.user;
 
-      if (tgUser && tgUser.id) {                    // проверяем по наличию id
-        console.log("✅ Telegram user received:", tgUser);
-
-        setUser(tgUser);                            // сохраняем объект пользователя
+      if (tgUser?.id) {
+        setUser(tgUser);
         setIsReady(true);
         clearInterval(interval);
       }
     }, 50);
 
     const timeout = setTimeout(() => {
-      console.warn("⚠️ Timeout waiting for Telegram user");
+      console.warn("⚠️ Telegram user timeout");
       setIsReady(true);
       clearInterval(interval);
     }, 3000);
@@ -43,8 +43,8 @@ export const useTelegram = () => {
 
   return {
     webApp,
-    user,                    // ← теперь возвращаем user, а не initDataUnsafe
+    user,
     isReady,
-    isTelegram: !!webApp && !!user,
+    isTelegram: !!webApp, // ✅ фикс
   };
-}
+};
