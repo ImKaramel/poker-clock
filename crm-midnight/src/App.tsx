@@ -46,12 +46,29 @@ const App: React.FC = () => {
 
   const hideMenu = hideMenuRoutes.includes(location.pathname);
 
-  // 🌐 BROWSER → сразу редирект
+  // 📡 AUTH LOGIC (HOOK ВСЕГДА ВЫЗЫВАЕТСЯ)
+  useEffect(() => {
+    if (!isTelegram || !user) return;
+
+    const runAuth = async () => {
+      try {
+        const response = await authAPI.telegramInitAuth({ user });
+
+        localStorage.setItem("auth_token", response.data.token);
+      } catch (e: any) {
+        setAuthError(e.message);
+      }
+    };
+
+    runAuth();
+  }, [user, isTelegram]);
+
+  // 🌐 BROWSER REDIRECT (логика после hooks)
   if (isReady && !isTelegram) {
     return <Navigate to="/web-auth" replace />;
   }
 
-  // 📱 TELEGRAM → ждём user
+  // 📱 LOADING STATE
   if (!isReady || (isTelegram && !user)) {
     return (
       <Loader>
@@ -63,21 +80,7 @@ const App: React.FC = () => {
     );
   }
 
-  // 📱 TELEGRAM AUTH
-  const runAuth = async () => {
-    try {
-      const response = await authAPI.telegramInitAuth({ user });
-
-      localStorage.setItem("auth_token", response.data.token);
-    } catch (e: any) {
-      setAuthError(e.message);
-    }
-  };
-
-  useEffect(() => {
-    if (isTelegram && user) runAuth();
-  }, [user]);
-
+  // ❌ ERROR
   if (authError) {
     return (
       <Loader>
@@ -109,5 +112,4 @@ const App: React.FC = () => {
     </>
   );
 };
-
 export default App;
