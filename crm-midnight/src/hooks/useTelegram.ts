@@ -10,7 +10,7 @@ export const useTelegram = () => {
     const tg = (window as any).Telegram?.WebApp;
 
     // 🌐 BROWSER MODE
-    if (!tg) {
+    if (!tg || !tg.initData) {
       setIsTelegram(false);
       setIsReady(true);
       return;
