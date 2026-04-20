@@ -30,7 +30,7 @@ const Loader = styled.div`
   background: black;
 `;
 
-export const App: React.FC = () => {
+const App: React.FC = () => {
   const { user, isTelegram, isReady } = useTelegram();
 
   const [authError, setAuthError] = useState<string | null>(null);
@@ -109,3 +109,5 @@ export const App: React.FC = () => {
     </>
   );
 };
+
+export default App;
