@@ -62,6 +62,7 @@ const App: React.FC = () => {
     if (!user) return;
 
     if (!user || !isTelegram || !isReady) return;
+    console.log("telegram", isTelegram)
 
     const runAuth = async () => {
       try {
