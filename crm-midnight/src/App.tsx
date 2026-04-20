@@ -39,7 +39,7 @@ const App: React.FC = () => {
   const [isLoadingAuthCheck, setIsLoadingAuthCheck] = useState<boolean>(true); // Состояние для проверки токена при старте
 
   const location = useLocation();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const hideMenuRoutes = [
     "/start",
