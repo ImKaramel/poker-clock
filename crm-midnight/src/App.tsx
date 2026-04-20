@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useTelegram } from "./hooks/useTelegram";
 import { authAPI } from "./utils/api";
@@ -36,6 +36,7 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const location = useLocation();
+  const navigate = useNavigate();
 
   const hideMenuRoutes = [
     "/start",
@@ -66,7 +67,7 @@ const App: React.FC = () => {
 
   // 🌐 BROWSER → СРАЗУ REDIRECT
   if (isReady && !isTelegram) {
-    return <Navigate to="/web-auth" replace />;
+    navigate('/web-auth')
   }
 
   // 📱 LOADING ONLY FOR TELEGRAM
