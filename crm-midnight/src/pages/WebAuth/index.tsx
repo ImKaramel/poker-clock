@@ -108,7 +108,6 @@ const WebAuth: React.FC = () => {
             backgroundImage: `url(${background})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
-            transform: "rotate(90deg) scale(1.4)",
             transformOrigin: "center",
             zIndex: 0,
           }}
