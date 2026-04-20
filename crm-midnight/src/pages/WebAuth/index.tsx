@@ -47,7 +47,7 @@ const WebAuth: React.FC = () => {
 
       <br />
 
-      <a href="https://t.me/Midnight_poker_bot">
+      <a href="https://t.me/Midnight_poker_bot/app">
         Открыть в Telegram
       </a>
     </div>
