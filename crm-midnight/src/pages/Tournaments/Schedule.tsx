@@ -18,6 +18,17 @@ import tournament_image from "../../assets/tournament_image.png";
 import { GameType } from "../../types";
 import { gamesAPI } from "../../utils/api";
 import { useNavigate } from "react-router-dom";
+import DEEPSTACK from '../../assets/DEEP STACK.png'
+import FREEZOUT from '../../assets/FREEZOUT.png'
+import MIDNIGHT_GIFT from '../../assets/MIDNIGHT Gift.png'
+import MIDNIGHT_Phoenix from '../../assets/MIDNIGHT Phoenix.png'
+
+const games_img = [
+  MIDNIGHT_Phoenix,
+  MIDNIGHT_GIFT,
+  DEEPSTACK,
+  FREEZOUT
+]
 
 export default function Schedule() {
   const [error, setError] = useState("");
@@ -105,7 +116,7 @@ export default function Schedule() {
               <TimeTitle>{formatTime(item.time)}</TimeTitle>
             </TimeContainer>
           </InfoCardContainer>
-          <img src={tournament_image} alt="img" />
+          <img src={games_img[index]} alt="img" />
         </TournamentCardContainer>
       ))}
     </TournamentsContainer>
