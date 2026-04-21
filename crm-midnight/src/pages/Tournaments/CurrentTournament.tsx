@@ -12,12 +12,13 @@ import {
   WarningTitle,
   WarningWrapper,
 } from "./styles";
-import current_tournament from "../../assets/grand_opening.jpg";
+// import current_tournament from "../../assets/grand_opening.jpg";
 import { ReactComponent as Warning } from "../../assets/warning.svg";
 import { GameType } from "../../types";
 import { gamesAPI, profileAPI } from "../../utils/api";
 import { useParams } from "react-router-dom";
 import { InfoChip } from "../Main/styles";
+import { getTournamentImage } from "@/utils/tournamentImages";
 
 export default function CurrentTournament() {
   const { id } = useParams<{ id: string }>();
@@ -122,7 +123,7 @@ export default function CurrentTournament() {
     <CurrentTournamentContainer>
       <TitleContainer>
         <img
-          src={current_tournament}
+          src={getTournamentImage(game?.name || "")}
           style={{ height: "100%", width: "100%", objectFit: "contain" }}
           alt="Выбранный турнир"
         />

@@ -9,7 +9,7 @@ import {
   MainHelpTitle,
 } from "./styles";
 import { TitleContainer } from "../Tournaments/styles";
-import current_tournament from "../../assets/grand_opening.jpg";
+// import current_tournament from "../../assets/grand_opening.jpg";
 import {
   InfoTitle,
   InfoWrapper,
@@ -25,7 +25,7 @@ import { ReactComponent as LogoVector } from "../../assets/logo_vector.svg";
 import { useNavigate } from "react-router-dom";
 import { gamesAPI, profileAPI, ratingAPI } from "../../utils/api";
 import { GameType, ProfileType, RatingType } from "../../types";
-// import { User } from "../Profile/Profile";
+import { getTournamentImage } from "@/utils/tournamentImages";
 
 const RatingEpxl = 500;
 
@@ -166,7 +166,7 @@ export default function Main() {
     <MainContainer>
       <TitleContainer onClick={handleTournamentClick}>
         <img
-          src={current_tournament}
+          src={getTournamentImage(nearestGame?.name || "")}
           style={{ height: "100%", width: "100%", objectFit: "contain" }}
           alt="current_tournament"
         />
