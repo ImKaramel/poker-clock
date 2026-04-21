@@ -25,7 +25,7 @@ import { ReactComponent as LogoVector } from "../../assets/logo_vector.svg";
 import { useNavigate } from "react-router-dom";
 import { gamesAPI, profileAPI, ratingAPI } from "../../utils/api";
 import { GameType, ProfileType, RatingType } from "../../types";
-import { getTournamentImage } from "@/utils/tournamentImages";
+import { getTournamentImage } from "../../utils/tournamentImages";
 
 const RatingEpxl = 500;
 

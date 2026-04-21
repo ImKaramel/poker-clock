@@ -18,7 +18,7 @@ import { GameType } from "../../types";
 import { gamesAPI, profileAPI } from "../../utils/api";
 import { useParams } from "react-router-dom";
 import { InfoChip } from "../Main/styles";
-import { getTournamentImage } from "@/utils/tournamentImages";
+import { getTournamentImage } from "../../utils/tournamentImages";
 
 export default function CurrentTournament() {
   const { id } = useParams<{ id: string }>();
