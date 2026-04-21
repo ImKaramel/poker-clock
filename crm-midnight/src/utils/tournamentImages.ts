@@ -1,5 +1,5 @@
 // src/utils/tournamentImages.ts
-import defaultTournamentImage from "../assets/grand_opening.jpg";
+// import defaultTournamentImage from "../assets/grand_opening.jpg";
 
 // Импортируем картинки для каждого турнира
 import midnight_phoenix from "../assets/MIDNIGHT Phoenix.jpg";
@@ -38,7 +38,7 @@ export const getTournamentImage = (tournamentName: string): string => {
 
   // Если картинка не найдена, возвращаем дефолтную
   console.warn(`Картинка для турнира "${tournamentName}" не найдена, используется дефолтная`);
-  return defaultTournamentImage;
+  return '';
 };
 
 // Опционально: функция для проверки, есть ли кастомная картинка для турнира
