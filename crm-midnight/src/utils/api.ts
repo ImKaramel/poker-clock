@@ -52,7 +52,7 @@ export const gamesAPI = {
 };
 
 export const ratingAPI = {
-  getRating: () => api.get('/rating/'),
+  getRating: () => api.get('/rating'),
 };
 
 export const profileAPI = {
