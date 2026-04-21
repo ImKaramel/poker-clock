@@ -14,7 +14,7 @@ import {
 } from "./styles";
 import { ReactComponent as Calendar } from "../../assets/calendar_date.svg";
 import { ReactComponent as Time } from "../../assets/time.svg";
-import tournament_image from "../../assets/tournament_image.png";
+// import tournament_image from "../../assets/tournament_image.png";
 import { GameType } from "../../types";
 import { gamesAPI } from "../../utils/api";
 import { useNavigate } from "react-router-dom";
