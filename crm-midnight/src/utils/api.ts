@@ -1,15 +1,20 @@
 import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.midnight-club-app.ru/api';
+const API_FALLBACK_URL = process.env.REACT_APP_API_FALLBACK_URL;
+const API_BASE_URLS = [
+  API_BASE_URL,
+  ...(API_FALLBACK_URL ? [API_FALLBACK_URL] : []),
+];
 
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_BASE_URLS[0],
+  timeout: 12000,
 });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token');
-  console.log('🔐 API Request - Token:', token ? 'YES' : 'NO');
-  // const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI0LjYzMDIxNTcyZSswOCIsImFkbSI6dHJ1ZSwic3ViIjoiNC42MzAyMTU3MmUrMDgiLCJleHAiOjE3NzYyNzk4MTYsImlhdCI6MTc3NTY3NTAxNn0.123htHIfVkHegEZaBpqYYqcrkqWpo7ubRgpPM7yhkRI'
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -20,17 +25,41 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      console.log('❌ 401 Unauthorized - clearing token');
+    const status = error.response?.status;
+
+    if (status === 401) {
       localStorage.removeItem('auth_token');
+      return Promise.reject(error);
     }
+
+    const isNetworkError = !error.response;
+    const isTimeout = error.code === 'ECONNABORTED';
+    const isRetryableStatus = [502, 503, 504].includes(status);
+    const requestConfig = error.config as any;
+
+    if (
+      requestConfig &&
+      !requestConfig.__retryWithFallback &&
+      API_BASE_URLS.length > 1 &&
+      (isNetworkError || isTimeout || isRetryableStatus)
+    ) {
+      const currentBaseUrl = requestConfig.baseURL || api.defaults.baseURL || API_BASE_URLS[0];
+      const currentIndex = API_BASE_URLS.indexOf(currentBaseUrl);
+      const nextIndex = currentIndex >= 0 ? currentIndex + 1 : 1;
+
+      if (nextIndex < API_BASE_URLS.length) {
+        requestConfig.__retryWithFallback = true;
+        requestConfig.baseURL = API_BASE_URLS[nextIndex];
+        return api(requestConfig);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
 
 export const authAPI = {
   telegramInitAuth: (user: any) => {
-    console.log("📤 Sending user:", user);
     return api.post("/auth/telegram", user);
   },
 };

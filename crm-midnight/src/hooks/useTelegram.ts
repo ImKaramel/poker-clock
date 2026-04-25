@@ -18,31 +18,33 @@ export const useTelegram = () => {
 
     // 📱 TELEGRAM MODE
     setIsTelegram(true);
-
-    tg.ready();
-    tg.expand();
-
     setWebApp(tg);
+    try {
+      tg.ready();
+      tg.expand();
+    } catch (error) {
+      console.warn("Telegram WebApp init error:", error);
+    }
 
-    const interval = setInterval(() => {
-      const tgUser = tg.initDataUnsafe?.user;
-
-      if (tgUser?.id) {
-        setUser(tgUser);
-        setIsReady(true);
-        clearInterval(interval);
-      }
-    }, 50);
-
-    const timeout = setTimeout(() => {
-      console.warn("⚠️ Telegram user timeout");
-      setUser(null);
+    const tgUser = tg.initDataUnsafe?.user;
+    if (tgUser?.id) {
+      setUser(tgUser);
       setIsReady(true);
-      clearInterval(interval);
-    }, 3000);
+      return;
+    }
+
+    // Fallback for slow WebView environments where initDataUnsafe may lag.
+    const timeout = setTimeout(() => {
+      const delayedUser = tg.initDataUnsafe?.user;
+      if (delayedUser?.id) {
+        setUser(delayedUser);
+      } else {
+        setUser(null);
+      }
+      setIsReady(true);
+    }, 1200);
 
     return () => {
-      clearInterval(interval);
       clearTimeout(timeout);
     };
   }, []);
