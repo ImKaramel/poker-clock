@@ -48,7 +48,8 @@ export default function Profile() {
   const [visibleRows, setVisibleRows] = useState<RatingType[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [edited, setEdited] = useState<boolean>(false);
-  const [nick_name, setNick_name] = useState<string>("Ваш ник");
+  const [isSavingNickname, setIsSavingNickname] = useState<boolean>(false);
+  const [nick_name, setNick_name] = useState<string>("");
 
   useEffect(() => {
     const getProfile = async () => {
@@ -56,7 +57,7 @@ export default function Profile() {
         const response = await profileAPI.getProfile();
         setProfile(response.data);
       } catch (err: any) {
-        setError(err);
+        setError(err?.message || "Не удалось загрузить профиль");
       }
     };
 
@@ -65,12 +66,17 @@ export default function Profile() {
         const response = await ratingAPI.getRating();
         setRating(response.data);
       } catch (err: any) {
-        setError(err);
+        setError(err?.message || "Не удалось загрузить рейтинг");
       }
     };
     getProfile();
     getRating();
-  }, [error]);
+  }, []);
+
+  useEffect(() => {
+    if (!profile?.user) return;
+    setNick_name(profile.user.nick_name || profile.user.first_name || "");
+  }, [profile]);
 
   useEffect(() => {
     if (rating && rating.length > 0 && profile?.user) {
@@ -94,22 +100,40 @@ export default function Profile() {
   }, [rating, profile]);
 
   const updateNickname = async () => {
-    try {
-      await profileAPI.updateProfile(nick_name);
+    const normalizedNickname = nick_name.trim();
+    if (!normalizedNickname) {
+      setError("Ник не может быть пустым");
+      return false;
+    }
 
-      setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              user: {
-                ...prev.user,
-                nick_name: nick_name,
-              },
-            }
-          : prev
-      );
+    try {
+      setIsSavingNickname(true);
+      setError("");
+      const response = await profileAPI.updateProfile(normalizedNickname);
+
+      if (response?.data?.user) {
+        setProfile(response.data);
+      } else {
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                user: {
+                  ...prev.user,
+                  nick_name: normalizedNickname,
+                },
+              }
+            : prev
+        );
+      }
+
+      setNick_name(normalizedNickname);
+      return true;
     } catch (err: any) {
-      setError(err);
+      setError(err?.response?.data?.detail || err?.message || "Не удалось сохранить ник");
+      return false;
+    } finally {
+      setIsSavingNickname(false);
     }
   };
 
@@ -167,7 +191,10 @@ export default function Profile() {
                 </InfoTitle>
                 <EditButtonContainer>
                   <EditButton
-                    onClick={() => setEdited(true)}
+                    onClick={() => {
+                      setNick_name(profile?.user?.nick_name || profile?.user?.first_name || "");
+                      setEdited(true);
+                    }}
                     style={{ width: "100%", height: "100%" }}
                     fill="#fff"
                   />
@@ -184,7 +211,10 @@ export default function Profile() {
 
                 <Button
                   style={{ color: "#fff" }}
-                  onClick={() => setEdited(false)}
+                  onClick={() => {
+                    setNick_name(profile?.user?.nick_name || profile?.user?.first_name || "");
+                    setEdited(false);
+                  }}
                 >
                   <X>✕</X>
                 </Button>
@@ -192,13 +222,20 @@ export default function Profile() {
                 <Button
                   style={{ color: "#fff" }}
                   onClick={async () => {
-                    await updateNickname();
-                    setEdited(false);
+                    if (isSavingNickname) return;
+                    const isSaved = await updateNickname();
+                    if (isSaved) {
+                      setEdited(false);
+                    }
                   }}
+                  disabled={isSavingNickname}
                 >
-                  <Check>✓</Check>
+                  <Check>{isSavingNickname ? "…" : "✓"}</Check>
                 </Button>
               </Wrapper>
+            )}
+            {!!error && (
+              <div style={{ fontSize: 12, color: "#ff8585", marginTop: 6 }}>{error}</div>
             )}
 
             <LineContainer>

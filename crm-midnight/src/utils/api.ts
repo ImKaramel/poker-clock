@@ -86,7 +86,17 @@ export const ratingAPI = {
 
 export const profileAPI = {
   getProfile: () => api.get('/profile'),
-  updateProfile: (nick_name: string) => api.patch('/profile/', { nick_name }),
+  updateProfile: async (nick_name: string) => {
+    try {
+      return await api.patch('/profile/', { nick_name });
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 404 || status === 405) {
+        return api.patch('/profile', { nick_name });
+      }
+      throw error;
+    }
+  },
 };
 
 export const supportAPI = {
