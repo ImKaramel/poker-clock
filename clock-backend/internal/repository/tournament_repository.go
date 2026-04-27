@@ -12,4 +12,6 @@ type TournamentRepository interface {
 	List(ctx context.Context) ([]domain.Tournament, error)
 	AddLevel(ctx context.Context, tournamentID string, level *domain.Level) error
 	ListLevels(ctx context.Context, tournamentID string) ([]domain.Level, error)
+	DeleteLevel(ctx context.Context, tournamentID, levelID string) error
+	Delete(ctx context.Context, id string) error
 }

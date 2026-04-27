@@ -6,18 +6,24 @@ import (
 
 	"backend/internal/domain"
 	"backend/internal/repository"
+	"backend/internal/timer"
 )
 
 var (
 	ErrTournamentNotFound = errors.New("tournament not found")
+	ErrLevelNotFound      = errors.New("level not found")
 )
 
 type TournamentService struct {
-	repo repository.TournamentRepository
+	repo  repository.TournamentRepository
+	timer timer.Manager
 }
 
-func NewTournamentService(repo repository.TournamentRepository) *TournamentService {
-	return &TournamentService{repo: repo}
+func NewTournamentService(repo repository.TournamentRepository, timerManager timer.Manager) *TournamentService {
+	return &TournamentService{
+		repo:  repo,
+		timer: timerManager,
+	}
 }
 
 func (s *TournamentService) CreateTournament(ctx context.Context, name string) (domain.Tournament, error) {
@@ -92,4 +98,46 @@ func (s *TournamentService) ResumeTournament(ctx context.Context, tournamentID s
 
 func (s *TournamentService) NextLevel(ctx context.Context, tournamentID string) (domain.Tournament, error) {
 	return domain.Tournament{}, errors.New("NextLevel is now handled by TimerService")
+}
+
+func (s *TournamentService) DeleteLevel(ctx context.Context, tournamentID, levelID string) error {
+	t, err := s.repo.Get(ctx, tournamentID)
+	if err != nil {
+		return err
+	}
+	if t == nil {
+		return ErrTournamentNotFound
+	}
+	levels, err := s.repo.ListLevels(ctx, tournamentID)
+	if err != nil {
+		return err
+	}
+
+	levelExists := false
+	for _, level := range levels {
+		if level.ID == levelID {
+			levelExists = true
+			break
+		}
+	}
+
+	if !levelExists {
+		return ErrLevelNotFound
+	}
+	return s.repo.DeleteLevel(ctx, tournamentID, levelID)
+}
+
+func (s *TournamentService) DeleteTournament(ctx context.Context, id string) error {
+	t, err := s.repo.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	if t == nil {
+		return ErrTournamentNotFound
+	}
+	if s.timer != nil {
+		s.timer.CleanupTimer(id)
+	}
+
+	return s.repo.Delete(ctx, id)
 }

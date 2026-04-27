@@ -10,6 +10,7 @@ import (
 )
 
 type persistFunc func(state *domain.TimerState) error
+type completionFunc func(tournamentID string)
 
 type tournamentTimer struct {
 	ctx    context.Context
@@ -22,8 +23,9 @@ type tournamentTimer struct {
 	timerState      string
 	levelStartedAt  time.Time
 
-	publish TimerStatePublisher
-	persist persistFunc
+	publish    TimerStatePublisher
+	persist    persistFunc
+	onComplete completionFunc
 }
 
 type TimerStatePublisher func(ViewState)
@@ -38,6 +40,7 @@ func newTournamentTimer(
 	levelStartedAt time.Time,
 	publish TimerStatePublisher,
 	persist persistFunc,
+	onComplete completionFunc,
 ) *tournamentTimer {
 	return &tournamentTimer{
 		ctx:             ctx,
@@ -49,6 +52,7 @@ func newTournamentTimer(
 		levelStartedAt:  levelStartedAt,
 		publish:         publish,
 		persist:         persist,
+		onComplete:      onComplete,
 	}
 }
 
@@ -97,10 +101,27 @@ func (t *tournamentTimer) tick() {
 func (t *tournamentTimer) currentStateLocked() ViewState {
 	levelNumber := t.currentLevelIdx + 1
 	var sb, bb int
+	var currentType, currentName string
+
 	if t.currentLevelIdx >= 0 && t.currentLevelIdx < len(t.levels) {
 		l := t.levels[t.currentLevelIdx]
 		sb = l.SmallBlind
 		bb = l.BigBlind
+		currentType = l.Type
+		currentName = l.Name
+	}
+
+	var nextLevel *LevelView
+	nextLevelIdx := t.currentLevelIdx + 1
+	if nextLevelIdx < len(t.levels) {
+		nextL := t.levels[nextLevelIdx]
+		nextLevel = &LevelView{
+			Type:            nextL.Type,
+			Name:            nextL.Name,
+			SmallBlind:      nextL.SmallBlind,
+			BigBlind:        nextL.BigBlind,
+			DurationMinutes: nextL.DurationMinutes,
+		}
 	}
 
 	return ViewState{
@@ -108,6 +129,9 @@ func (t *tournamentTimer) currentStateLocked() ViewState {
 		SmallBlind:       sb,
 		BigBlind:         bb,
 		RemainingSeconds: t.remaining,
+		CurrentType:      currentType,
+		CurrentName:      currentName,
+		NextLevel:        nextLevel,
 	}
 }
 
@@ -159,6 +183,10 @@ func (t *tournamentTimer) advanceLocked() error {
 			LevelStartedAt:    t.levelStartedAt,
 			State:             t.timerState,
 		})
+
+		if t.onComplete != nil {
+			t.onComplete(t.id)
+		}
 		return nil
 	}
 

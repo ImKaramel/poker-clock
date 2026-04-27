@@ -30,9 +30,11 @@ type CreateTournamentRequest struct {
 }
 
 type CreateLevelRequest struct {
-	SmallBlind      int `json:"small_blind"`
-	BigBlind        int `json:"big_blind"`
-	DurationMinutes int `json:"duration_minutes"`
+	Type            string `json:"type"`
+	Name            string `json:"name,omitempty"`
+	SmallBlind      int    `json:"small_blind"`
+	BigBlind        int    `json:"big_blind"`
+	DurationMinutes int    `json:"duration_minutes"`
 }
 
 //func (h *TournamentHandler) UpdateStats(w http.ResponseWriter, r *http.Request) {
@@ -109,4 +111,24 @@ func (h *TournamentHandler) GetTournament(w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(dto.ToTournamentResponse(t))
+}
+
+func (h *TournamentHandler) DeleteTournament(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+
+	err := h.tournamentService.DeleteTournament(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, service.ErrTournamentNotFound) {
+			http.Error(w, "tournament not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "could not delete tournament", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

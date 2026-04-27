@@ -71,6 +71,8 @@ func (r *TournamentRepository) List(ctx context.Context) ([]domain.Tournament, e
 			t.name,
 			t.created_at,
 			l.id,
+			l.type,
+			l.name,
 			l.small_blind,
 			l.big_blind,
 			l.duration_minutes,
@@ -89,15 +91,15 @@ func (r *TournamentRepository) List(ctx context.Context) ([]domain.Tournament, e
 		currentID string
 		current   *domain.Tournament
 	)
-
 	for rows.Next() {
 		var (
 			tID       string
 			name      string
-			ownerID   string
 			createdAt time.Time
 
 			levelID         sql.NullString
+			levelType       sql.NullString
+			levelName       sql.NullString
 			smallBlind      sql.NullInt32
 			bigBlind        sql.NullInt32
 			durationMinutes sql.NullInt32
@@ -107,9 +109,10 @@ func (r *TournamentRepository) List(ctx context.Context) ([]domain.Tournament, e
 		if err := rows.Scan(
 			&tID,
 			&name,
-			&ownerID,
 			&createdAt,
 			&levelID,
+			&levelType,
+			&levelName,
 			&smallBlind,
 			&bigBlind,
 			&durationMinutes,
@@ -133,6 +136,8 @@ func (r *TournamentRepository) List(ctx context.Context) ([]domain.Tournament, e
 		if levelID.Valid {
 			l := domain.Level{
 				ID:              levelID.String,
+				Type:            levelType.String,
+				Name:            levelName.String,
 				SmallBlind:      int(smallBlind.Int32),
 				BigBlind:        int(bigBlind.Int32),
 				DurationMinutes: int(durationMinutes.Int32),
@@ -159,9 +164,25 @@ func (r *TournamentRepository) AddLevel(ctx context.Context, tournamentID string
 	}
 
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO levels (id, tournament_id, small_blind, big_blind, duration_minutes, level_order)
-		 VALUES ($1, $2, $3, $4, $5, $6)`,
-		level.ID, tournamentID, level.SmallBlind, level.BigBlind, level.DurationMinutes, level.Order,
+		`INSERT INTO levels (
+		id,
+		tournament_id,
+		type,
+		name,
+		small_blind,
+		big_blind,
+		duration_minutes,
+		level_order
+	)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		level.ID,
+		tournamentID,
+		level.Type,
+		level.Name,
+		level.SmallBlind,
+		level.BigBlind,
+		level.DurationMinutes,
+		level.Order,
 	)
 	if err != nil {
 		return fmt.Errorf("insert level: %w", err)
@@ -172,8 +193,17 @@ func (r *TournamentRepository) AddLevel(ctx context.Context, tournamentID string
 
 func (r *TournamentRepository) ListLevels(ctx context.Context, tournamentID string) ([]domain.Level, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, small_blind, big_blind, duration_minutes, level_order
-		 FROM levels WHERE tournament_id = $1 ORDER BY level_order`,
+		`SELECT
+					id,
+					type,
+					name,
+					small_blind,
+					big_blind,
+					duration_minutes,
+					level_order
+				FROM levels
+				WHERE tournament_id = $1
+				ORDER BY level_order`,
 		tournamentID,
 	)
 	if err != nil {
@@ -184,7 +214,15 @@ func (r *TournamentRepository) ListLevels(ctx context.Context, tournamentID stri
 	var levels []domain.Level
 	for rows.Next() {
 		var l domain.Level
-		if err := rows.Scan(&l.ID, &l.SmallBlind, &l.BigBlind, &l.DurationMinutes, &l.Order); err != nil {
+		if err := rows.Scan(
+			&l.ID,
+			&l.Type,
+			&l.Name,
+			&l.SmallBlind,
+			&l.BigBlind,
+			&l.DurationMinutes,
+			&l.Order,
+		); err != nil {
 			return nil, fmt.Errorf("scan level row: %w", err)
 		}
 		levels = append(levels, l)
@@ -197,6 +235,50 @@ func (r *TournamentRepository) ListLevels(ctx context.Context, tournamentID stri
 	return levels, nil
 }
 
+func (r *TournamentRepository) DeleteLevel(ctx context.Context, tournamentID, levelID string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+	var deletedOrder int
+	err = tx.QueryRowContext(ctx,
+		`SELECT level_order FROM levels WHERE id = $1 AND tournament_id = $2`,
+		levelID, tournamentID,
+	).Scan(&deletedOrder)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("level not found")
+		}
+		return fmt.Errorf("get level order: %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx,
+		`DELETE FROM levels WHERE id = $1 AND tournament_id = $2`,
+		levelID, tournamentID,
+	)
+	if err != nil {
+		return fmt.Errorf("delete level: %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx,
+		`UPDATE levels SET level_order = level_order - 1 
+		 WHERE tournament_id = $1 AND level_order > $2`,
+		tournamentID, deletedOrder,
+	)
+	if err != nil {
+		return fmt.Errorf("reindex levels: %w", err)
+	}
+
+	return nil
+}
+
 func (r *TournamentRepository) UpdateState(ctx context.Context, tournamentID, state string) error {
 	return fmt.Errorf("UpdateState is no longer supported; timer state is managed via TimerRepository")
 }
@@ -205,6 +287,48 @@ func (r *TournamentRepository) UpdateCurrentLevelIndex(ctx context.Context, tour
 	return fmt.Errorf("UpdateCurrentLevelIndex is no longer supported; timer state is managed via TimerRepository")
 }
 
-func (r *TournamentRepository) UpdateTimerState(ctx context.Context, tournamentID string, currentLevelIndex int, levelStartedAt time.Time, remainingSeconds int, state string) error {
+func (r *TournamentRepository) Delete(ctx context.Context, id string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	//_, err = tx.ExecContext(ctx, `
+	//	UPDATE tournaments
+	//	SET state = 'stopped',
+	//	    current_level_index = NULL,
+	//	    level_started_at = NULL,
+	//	    remaining_seconds = NULL
+	//	WHERE id = $1
+	//`, id)
+	//if err != nil {
+	//	return fmt.Errorf("clear timer state: %w", err)
+	//}
+
+	_, err = tx.ExecContext(ctx, `
+		DELETE FROM levels WHERE tournament_id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete levels: %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		DELETE FROM tournaments WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete tournament: %w", err)
+	}
+
+	return nil
+}
+
+func (r *TournamentRepository) UpdateTimerState() error {
 	return fmt.Errorf("UpdateTimerState is no longer supported; use TimerRepository instead")
 }

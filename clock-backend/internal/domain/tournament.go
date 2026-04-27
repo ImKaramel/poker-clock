@@ -7,8 +7,4 @@ type Tournament struct {
 	Name      string
 	Levels    []Level
 	CreatedAt time.Time
-
-	// Stats from App Backend
-	PlayersCount int
-	TotalChips   int
 }
