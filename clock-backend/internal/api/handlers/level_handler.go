@@ -36,20 +36,32 @@ func (h *LevelHandler) AddLevel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validation.ValidateBlinds(req.SmallBlind, req.BigBlind); err != nil {
-		http.Error(w, "invalid blinds", http.StatusBadRequest)
+	if req.Type != "level" && req.Type != "break" {
+		http.Error(w, "invalid type: must be 'level' or 'break'", http.StatusBadRequest)
 		return
 	}
+
+	if req.Type == "level" {
+		if err := validation.ValidateBlinds(req.SmallBlind, req.BigBlind); err != nil {
+			http.Error(w, "invalid blinds", http.StatusBadRequest)
+			return
+		}
+	} else if req.Type == "break" {
+		req.SmallBlind = 0
+		req.BigBlind = 0
+	}
+
 	if err := validation.ValidateDurationMinutes(req.DurationMinutes); err != nil {
 		http.Error(w, "invalid duration_minutes", http.StatusBadRequest)
 		return
 	}
 
-	level := domain.Level{
-		SmallBlind:      req.SmallBlind,
-		BigBlind:        req.BigBlind,
-		DurationMinutes: req.DurationMinutes,
-	}
+	var level domain.Level
+	level.Type = req.Type
+	level.Name = req.Name
+	level.SmallBlind = req.SmallBlind
+	level.BigBlind = req.BigBlind
+	level.DurationMinutes = req.DurationMinutes
 
 	t, err := h.tournamentService.AddLevel(r.Context(), id, level)
 	if err != nil {
@@ -90,4 +102,34 @@ func (h *LevelHandler) ListLevels(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *LevelHandler) DeleteLevel(w http.ResponseWriter, r *http.Request) {
+	tournamentID := chi.URLParam(r, "id")
+	if tournamentID == "" {
+		http.Error(w, "missing tournament id", http.StatusBadRequest)
+		return
+	}
+
+	levelID := chi.URLParam(r, "levelId")
+	if levelID == "" {
+		http.Error(w, "missing level id", http.StatusBadRequest)
+		return
+	}
+
+	err := h.tournamentService.DeleteLevel(r.Context(), tournamentID, levelID)
+	if err != nil {
+		if errors.Is(err, service.ErrTournamentNotFound) {
+			http.Error(w, "tournament not found", http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, service.ErrLevelNotFound) {
+			http.Error(w, "level not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "could not delete level", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

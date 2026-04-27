@@ -2,13 +2,14 @@ package httpapi
 
 import (
 	"context"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/pridecrm/app-backend/internal/domain"
 	infraauth "github.com/pridecrm/app-backend/internal/infrastructure/auth"
 	"github.com/pridecrm/app-backend/internal/usecase"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 func (h *Handlers) listGamesQuery(ctx context.Context, isAdmin bool) ([]domain.Game, error) {
@@ -231,13 +232,14 @@ func (h *Handlers) GameParticipantsAdmin(c *gin.Context) {
 		if u != nil {
 			ui = map[string]any{
 				"user_id": u.UserID, "username": u.Username,
+				"nickname":   derefStrPtr(u.NickName),
 				"first_name": derefStrPtr(u.FirstName), "last_name": derefStrPtr(u.LastName),
 			}
 		}
 		out = append(out, map[string]any{
 			"id": p.ID, "user": p.UserID, "user_info": ui, "game": p.GameID,
 			"entries": p.Entries, "rebuys": p.Rebuys, "addons": p.Addons,
-			"final_points": p.FinalPoints, "position": p.Position,
+			"final_points": p.FinalPoints, "position": p.Position, "arrived": p.Arrived, "is_out": p.IsOut,
 			"joined_at": p.JoinedAt.UTC().Format(time.RFC3339),
 		})
 	}
@@ -286,7 +288,7 @@ func (h *Handlers) GameAddParticipantAdmin(c *gin.Context) {
 		}
 		p.Rebuys = reb
 		p.Addons = add
-		if err := h.Repo.Participants.Update(c.Request.Context(), p); err != nil {
+		if err := h.Repo.Participants.Update(c.Request.Context(), p, 0); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -368,52 +370,91 @@ func (h *Handlers) GameUpdateParticipantAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
+
 	var body struct {
 		UserID      string `json:"user_id"`
 		Entries     *int   `json:"entries"`
-		Rebuys      *int   `json:"rebuys"`
+		Rebuys      *int   `json:"rebuys"` // delta: +1 / -1
 		Addons      *int   `json:"addons"`
 		Position    *int   `json:"position"`
 		FinalPoints *int   `json:"final_points"`
 	}
+
 	if err := c.ShouldBindJSON(&body); err != nil || body.UserID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id required"})
 		return
 	}
+
 	u, err := h.Repo.Users.GetByID(c.Request.Context(), body.UserID)
 	if err != nil || u == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
-	p, err := h.Repo.Participants.GetByUserAndGame(c.Request.Context(), body.UserID, id)
+
+	p, err := h.Repo.Participants.GetByUserAndGame(
+		c.Request.Context(),
+		body.UserID,
+		id,
+	)
 	if err != nil || p == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Participant not found"})
 		return
 	}
+
 	if body.Entries != nil {
 		p.Entries = *body.Entries
 	}
+
+	// rebuys — это delta, а не абсолютное значение
+	rebuyDelta := 0
 	if body.Rebuys != nil {
-		p.Rebuys = *body.Rebuys
+		rebuyDelta = *body.Rebuys
 	}
+
 	if body.Addons != nil {
 		p.Addons = *body.Addons
 	}
+
 	if body.Position != nil {
 		p.Position = body.Position
 	}
+
 	if body.FinalPoints != nil {
 		p.FinalPoints = *body.FinalPoints
 	}
-	if err := h.Repo.Participants.Update(c.Request.Context(), p); err != nil {
+
+	if err := h.Repo.Participants.Update(
+		c.Request.Context(),
+		p,
+		rebuyDelta,
+	); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	uFull, _ := h.Repo.Users.GetByID(c.Request.Context(), p.UserID)
+
+	updated, err := h.Repo.Participants.GetByUserAndGame(
+		c.Request.Context(),
+		body.UserID,
+		id,
+	)
+	if err != nil || updated == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to reload participant",
+		})
+		return
+	}
+
+	uFull, _ := h.Repo.Users.GetByID(c.Request.Context(), updated.UserID)
+
 	c.JSON(http.StatusOK, map[string]any{
-		"id": p.ID, "user": userToMap(uFull), "game": p.GameID,
-		"entries": p.Entries, "rebuys": p.Rebuys, "addons": p.Addons,
-		"final_points": p.FinalPoints, "position": p.Position,
-		"joined_at": p.JoinedAt.UTC().Format(time.RFC3339),
+		"id":           updated.ID,
+		"user":         userToMap(uFull),
+		"game":         updated.GameID,
+		"entries":      updated.Entries,
+		"rebuys":       updated.Rebuys,
+		"addons":       updated.Addons,
+		"final_points": updated.FinalPoints,
+		"position":     updated.Position,
+		"joined_at":    updated.JoinedAt.UTC().Format(time.RFC3339),
 	})
 }
