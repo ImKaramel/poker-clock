@@ -135,6 +135,9 @@ func (h *TimerHandler) TimerWS(w http.ResponseWriter, r *http.Request) {
 		"small_blind":       state.SmallBlind,
 		"big_blind":         state.BigBlind,
 		"remaining_seconds": state.RemainingSeconds,
+		"current_type":      state.CurrentType,
+		"current_name":      state.CurrentName,
+		"next_level":        state.NextLevel,
 	}
 	if err := conn.WriteJSON(initial); err != nil {
 		return
@@ -160,6 +163,9 @@ func (h *TimerHandler) TimerWS(w http.ResponseWriter, r *http.Request) {
 				"small_blind":       s.SmallBlind,
 				"big_blind":         s.BigBlind,
 				"remaining_seconds": s.RemainingSeconds,
+				"current_type":      s.CurrentType,
+				"current_name":      s.CurrentName,
+				"next_level":        s.NextLevel,
 			}
 			if err := conn.WriteJSON(msg); err != nil {
 				return

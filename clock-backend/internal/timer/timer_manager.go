@@ -10,14 +10,25 @@ import (
 	"backend/internal/repository"
 )
 
-type ViewState struct {
-	LevelNumber      int
-	SmallBlind       int
-	BigBlind         int
-	RemainingSeconds int
+type LevelView struct {
+	Type            string `json:"type"` // "level" | "break"
+	Name            string `json:"name"`
+	SmallBlind      int    `json:"small_blind"`
+	BigBlind        int    `json:"big_blind"`
+	DurationMinutes int    `json:"duration_minutes"`
+}
 
-	PlayersCount int
-	TotalChips   int
+type ViewState struct {
+	LevelNumber      int        `json:"level"`
+	SmallBlind       int        `json:"small_blind"`
+	BigBlind         int        `json:"big_blind"`
+	RemainingSeconds int        `json:"remaining_seconds"`
+	CurrentType      string     `json:"current_type"`
+	CurrentName      string     `json:"current_name"`
+	NextLevel        *LevelView `json:"next_level"`
+
+	PlayersCount int `json:"players_count"`
+	TotalChips   int `json:"total_chips"`
 }
 
 type TournamentRuntimeData struct {
@@ -33,6 +44,7 @@ type Manager interface {
 	GetState(ctx context.Context, tournamentID string) (ViewState, error)
 	Subscribe(tournamentID string) (<-chan ViewState, func(), error)
 	UpdateStats(tournamentID string, players int, chips int)
+	CleanupTimer(tournamentID string)
 	Stop()
 }
 
@@ -92,13 +104,6 @@ func (m *manager) GetStats(tournamentID string) TournamentRuntimeData {
 }
 
 func (m *manager) StartTournamentTimer(ctx context.Context, tournamentID string) error {
-	m.mu.Lock()
-	if _, ok := m.timers[tournamentID]; ok {
-		m.mu.Unlock()
-		return fmt.Errorf("timer for tournament %s is already running", tournamentID)
-	}
-	m.mu.Unlock()
-
 	t, err := m.tournamentRepo.Get(ctx, tournamentID)
 	if err != nil {
 		return fmt.Errorf("load tournament for timer: %w", err)
@@ -110,32 +115,33 @@ func (m *manager) StartTournamentTimer(ctx context.Context, tournamentID string)
 		return fmt.Errorf("tournament %s has no levels", tournamentID)
 	}
 
+	m.mu.Lock()
+	if tt, exists := m.timers[tournamentID]; exists {
+		m.mu.Unlock()
+		state := tt.state()
+		if state.RemainingSeconds > 0 {
+			return fmt.Errorf("timer for tournament %s is already running", tournamentID)
+		}
+		m.mu.Lock()
+		delete(m.timers, tournamentID)
+		m.mu.Unlock()
+	} else {
+		m.mu.Unlock()
+	}
+
 	now := time.Now()
 
 	timerState, err := m.timerRepo.GetTimerState(ctx, tournamentID)
 	if err != nil {
 		return fmt.Errorf("get timer state: %w", err)
 	}
-	if timerState == nil {
-		timerState = &domain.TimerState{
-			TournamentID:      tournamentID,
-			CurrentLevelIndex: 0,
-			RemainingSeconds:  t.Levels[0].DurationMinutes * 60,
-			LevelStartedAt:    now,
-			State:             "running",
-		}
-	} else {
-		if timerState.CurrentLevelIndex < 0 {
-			timerState.CurrentLevelIndex = 0
-		}
-		if timerState.CurrentLevelIndex >= len(t.Levels) {
-			timerState.CurrentLevelIndex = len(t.Levels) - 1
-		}
-		if timerState.RemainingSeconds <= 0 {
-			timerState.RemainingSeconds = t.Levels[timerState.CurrentLevelIndex].DurationMinutes * 60
-		}
-		timerState.State = "running"
-		timerState.LevelStartedAt = now
+
+	timerState = &domain.TimerState{
+		TournamentID:      tournamentID,
+		CurrentLevelIndex: 0,
+		RemainingSeconds:  t.Levels[0].DurationMinutes * 60,
+		LevelStartedAt:    now,
+		State:             "running",
 	}
 
 	if err := m.timerRepo.UpdateTimerState(ctx, timerState); err != nil {
@@ -149,6 +155,7 @@ func (m *manager) StartTournamentTimer(ctx context.Context, tournamentID string)
 		func(s *domain.TimerState) error {
 			return m.timerRepo.UpdateTimerState(context.Background(), s)
 		},
+		m.onTournamentCompleted,
 	)
 
 	m.mu.Lock()
@@ -164,9 +171,13 @@ func (m *manager) PauseTournamentTimer(tournamentID string) error {
 	m.mu.RLock()
 	tt, ok := m.timers[tournamentID]
 	m.mu.RUnlock()
+
+	fmt.Println("PAUSE DEBUG:", tournamentID, "exists:", ok)
+
 	if !ok {
 		return fmt.Errorf("timer for tournament %s not found", tournamentID)
 	}
+
 	return tt.pause()
 }
 
@@ -224,14 +235,32 @@ func (m *manager) GetState(ctx context.Context, tournamentID string) (ViewState,
 		bb = l.BigBlind
 	}
 	stats := m.GetStats(tournamentID)
+	nextLevel := m.getNextLevel(t.Levels, levelIdx)
 	return ViewState{
 		LevelNumber:      levelNumber,
 		SmallBlind:       sb,
 		BigBlind:         bb,
 		RemainingSeconds: timerState.RemainingSeconds,
+		NextLevel:        nextLevel,
 		PlayersCount:     stats.PlayersCount,
 		TotalChips:       stats.TotalChips,
 	}, nil
+}
+
+func (m *manager) getNextLevel(levels []domain.Level, currentLevelIdx int) *LevelView {
+	nextLevelIdx := currentLevelIdx + 1
+	if nextLevelIdx >= len(levels) {
+		return nil
+	}
+
+	nextLevel := levels[nextLevelIdx]
+	return &LevelView{
+		Type:            nextLevel.Type,
+		Name:            nextLevel.Name,
+		SmallBlind:      nextLevel.SmallBlind,
+		BigBlind:        nextLevel.BigBlind,
+		DurationMinutes: nextLevel.DurationMinutes,
+	}
 }
 
 func (m *manager) Subscribe(tournamentID string) (<-chan ViewState, func(), error) {
@@ -291,8 +320,7 @@ func (m *manager) RestoreTimers(ctx context.Context) {
 	}
 
 	for _, timerState := range timerStates {
-		// Only restore timers that are not stopped
-		if timerState.State == "stopped" {
+		if timerState.State != "running" && timerState.State != "paused" {
 			continue
 		}
 
@@ -303,13 +331,20 @@ func (m *manager) RestoreTimers(ctx context.Context) {
 		if len(t.Levels) == 0 {
 			continue // Skip tournaments without levels
 		}
+		if timerState.CurrentLevelIndex >= len(t.Levels) {
+			resetState := &domain.TimerState{
+				TournamentID:      timerState.TournamentID,
+				CurrentLevelIndex: 0,
+				RemainingSeconds:  t.Levels[0].DurationMinutes * 60,
+				LevelStartedAt:    time.Time{},
+				State:             "stopped",
+			}
+			m.timerRepo.UpdateTimerState(ctx, resetState)
+			continue
+		}
 
-		// Validate and fix timer state
 		if timerState.CurrentLevelIndex < 0 {
 			timerState.CurrentLevelIndex = 0
-		}
-		if timerState.CurrentLevelIndex >= len(t.Levels) {
-			timerState.CurrentLevelIndex = len(t.Levels) - 1
 		}
 		if timerState.RemainingSeconds <= 0 {
 			timerState.RemainingSeconds = t.Levels[timerState.CurrentLevelIndex].DurationMinutes * 60
@@ -323,6 +358,7 @@ func (m *manager) RestoreTimers(ctx context.Context) {
 			func(s *domain.TimerState) error {
 				return m.timerRepo.UpdateTimerState(context.Background(), s)
 			},
+			m.onTournamentCompleted,
 		)
 
 		m.mu.Lock()
@@ -331,6 +367,55 @@ func (m *manager) RestoreTimers(ctx context.Context) {
 
 		go tt.run()
 	}
+}
+
+func (m *manager) onTournamentCompleted(tournamentID string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.timers, tournamentID)
+
+	go func() {
+		ctx := context.Background()
+		t, err := m.tournamentRepo.Get(ctx, tournamentID)
+		if err != nil || t == nil || len(t.Levels) == 0 {
+			return
+		}
+
+		resetState := &domain.TimerState{
+			TournamentID:      tournamentID,
+			CurrentLevelIndex: 0,
+			RemainingSeconds:  t.Levels[0].DurationMinutes * 60,
+			LevelStartedAt:    time.Time{},
+			State:             "stopped",
+		}
+
+		m.timerRepo.UpdateTimerState(ctx, resetState)
+	}()
+}
+
+func (m *manager) CleanupTimer(tournamentID string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if tt, exists := m.timers[tournamentID]; exists {
+		tt.stop()
+		delete(m.timers, tournamentID)
+	}
+	delete(m.runtimeData, tournamentID)
+
+	m.subsMu.Lock()
+	delete(m.subscribers, tournamentID)
+	m.subsMu.Unlock()
+
+	go func() {
+		ctx := context.Background()
+		m.timerRepo.UpdateTimerState(ctx, &domain.TimerState{
+			TournamentID:      tournamentID,
+			CurrentLevelIndex: 0,
+			RemainingSeconds:  0,
+			LevelStartedAt:    time.Time{},
+			State:             "stopped",
+		})
+	}()
 }
 
 func (m *manager) Stop() {
