@@ -20,7 +20,7 @@ const TOURNAMENT_IMAGES_MAP: Record<string, string> = {
   "MIDNIGHT Gift": midnight_gift,
   "FREEROLL": freeroll,
   "SPEED RACER": speed_racer,
-  "HOLDEM CLASSIC": classic_holdem,
+  "CLASSIC HOLDEM": classic_holdem,
   "MIDNIGHT Poker": midnight_poker,
   "MIDNIGHT KNOKOUT": midnight_knokout
 };
