@@ -3,11 +3,10 @@ from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Загружаем переменные окружения
 load_dotenv()
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-MINI_APP_URL = "https://poker-clock-nine.vercel.app/"
+MINI_APP_URL = "https://midnight-club-app.ru"
 API_BASE_URL = os.getenv("REACT_APP_API_URL", "https://api.midnight-club-app.ru/api")
 
 if not BOT_TOKEN:
@@ -21,7 +20,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [[
         InlineKeyboardButton(
-            "🎮 Открыть Poker CRM",
+            "🎮 Открыть Midnight APP",
             web_app={"url": MINI_APP_URL}
         )
     ]]
@@ -29,12 +28,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
-                f"👋 Добро пожаловать, {user.first_name or 'игрок'}!\n\n"
-                "🎯 Poker CRM поможет вам:\n"
-                "• Смотреть расписание игр\n"
-                "• Регистрироваться на турниры\n"
-                "• Следить за своим рейтингом\n"
-                "• Узнавать результаты\n\n"
+                f"👋 Добро пожаловать в Midnight Club, {user.first_name or 'игрок'}!\n\n"
                 "Нажмите кнопку ниже, чтобы открыть приложение!",
                 reply_markup=reply_markup
             )
@@ -51,7 +45,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• Расписанию турниров\n"
         "• Рейтингу игроков\n"
         "• Личному профилю\n"
-        "• Результатам игр\n\n"
+        " Результатам игр\n\n"
         "По вопросам обращайтесь к администратору."
     )
 
@@ -60,16 +54,15 @@ def main():
     """Запуск Telegram-бота"""
     print("🤖 Запуск Telegram-бота Poker CRM...")
 
-    try:
-        app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
         # Добавляем обработчики команд
-        app.add_handler(CommandHandler("start", start))
-        app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_command))
 
-        print("✅ Бот успешно запущен. Ожидание сообщений...")
-        app.run_polling()
-
+    print("✅ Бот успешно запущен. Ожидание сообщений...")
+    app.run_polling()
 
 if __name__ == "__main__":
     main()
