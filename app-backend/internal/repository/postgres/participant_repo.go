@@ -22,7 +22,7 @@ func NewParticipantRepo(pool *pgxpool.Pool) *ParticipantRepo {
 func scanParticipant(row pgx.Row) (*domain.Participant, error) {
 	var p domain.Participant
 	var pos *int
-	err := row.Scan(&p.ID, &p.UserID, &p.GameID, &p.Entries, &p.Rebuys, &p.Addons, &p.FinalPoints, &pos, &p.JoinedAt)
+	err := row.Scan(&p.ID, &p.UserID, &p.GameID, &p.Entries, &p.Rebuys, &p.Addons, &p.FinalPoints, &pos, &p.Arrived, &p.IsOut, &p.JoinedAt)
 	p.Position = pos
 	if err != nil {
 		return nil, err
@@ -32,16 +32,16 @@ func scanParticipant(row pgx.Row) (*domain.Participant, error) {
 
 func (r *ParticipantRepo) Create(ctx context.Context, p *domain.Participant) error {
 	err := r.pool.QueryRow(ctx, `
-		INSERT INTO participants (user_id, game_id, entries, rebuys, addons, final_points, position)
-		VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, joined_at`,
-		p.UserID, p.GameID, p.Entries, p.Rebuys, p.Addons, p.FinalPoints, p.Position,
+		INSERT INTO participants (user_id, game_id, entries, rebuys, addons, final_points, position, arrived, is_out)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, joined_at`,
+		p.UserID, p.GameID, p.Entries, p.Rebuys, p.Addons, p.FinalPoints, p.Position, p.Arrived, p.IsOut,
 	).Scan(&p.ID, &p.JoinedAt)
 	return err
 }
 
 func (r *ParticipantRepo) GetByID(ctx context.Context, id int64) (*domain.Participant, error) {
 	row := r.pool.QueryRow(ctx, `
-		SELECT id, user_id, game_id, entries, rebuys, addons, final_points, position, joined_at
+		SELECT id, user_id, game_id, entries, rebuys, addons, final_points, position, arrived, is_out, joined_at
 		FROM participants WHERE id = $1`, id)
 	p, err := scanParticipant(row)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -52,7 +52,7 @@ func (r *ParticipantRepo) GetByID(ctx context.Context, id int64) (*domain.Partic
 
 func (r *ParticipantRepo) GetByUserAndGame(ctx context.Context, userID string, gameID int64) (*domain.Participant, error) {
 	row := r.pool.QueryRow(ctx, `
-		SELECT id, user_id, game_id, entries, rebuys, addons, final_points, position, joined_at
+		SELECT id, user_id, game_id, entries, rebuys, addons, final_points, position, arrived, is_out, joined_at
 		FROM participants WHERE user_id = $1 AND game_id = $2`, userID, gameID)
 	p, err := scanParticipant(row)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -61,11 +61,26 @@ func (r *ParticipantRepo) GetByUserAndGame(ctx context.Context, userID string, g
 	return p, err
 }
 
-func (r *ParticipantRepo) Update(ctx context.Context, p *domain.Participant) error {
+func (r *ParticipantRepo) Update(ctx context.Context, p *domain.Participant, rebuyDelta int) error {
 	_, err := r.pool.Exec(ctx, `
-		UPDATE participants SET entries = $2, rebuys = $3, addons = $4, final_points = $5, position = $6
+		UPDATE participants
+		SET
+			entries = $2,
+			rebuys = rebuys + $3,
+			addons = $4,
+			final_points = $5,
+			position = $6,
+			arrived = $7,
+			is_out = $8
 		WHERE id = $1`,
-		p.ID, p.Entries, p.Rebuys, p.Addons, p.FinalPoints, p.Position,
+		p.ID,
+		p.Entries,
+		rebuyDelta,
+		p.Addons,
+		p.FinalPoints,
+		p.Position,
+		p.Arrived,
+		p.IsOut,
 	)
 	return err
 }
@@ -82,7 +97,7 @@ func (r *ParticipantRepo) DeleteByUserAndGame(ctx context.Context, userID string
 
 func (r *ParticipantRepo) ListByGame(ctx context.Context, gameID int64) ([]domain.Participant, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, user_id, game_id, entries, rebuys, addons, final_points, position, joined_at
+		SELECT id, user_id, game_id, entries, rebuys, addons, final_points, position, arrived, is_out, joined_at
 		FROM participants WHERE game_id = $1 ORDER BY joined_at`, gameID)
 	if err != nil {
 		return nil, err
@@ -93,7 +108,7 @@ func (r *ParticipantRepo) ListByGame(ctx context.Context, gameID int64) ([]domai
 
 func (r *ParticipantRepo) ListByUser(ctx context.Context, userID string) ([]domain.Participant, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, user_id, game_id, entries, rebuys, addons, final_points, position, joined_at
+		SELECT id, user_id, game_id, entries, rebuys, addons, final_points, position, arrived, is_out, joined_at
 		FROM participants WHERE user_id = $1 ORDER BY joined_at`, userID)
 	if err != nil {
 		return nil, err
@@ -104,7 +119,7 @@ func (r *ParticipantRepo) ListByUser(ctx context.Context, userID string) ([]doma
 
 func (r *ParticipantRepo) ListAll(ctx context.Context) ([]domain.Participant, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, user_id, game_id, entries, rebuys, addons, final_points, position, joined_at
+		SELECT id, user_id, game_id, entries, rebuys, addons, final_points, position, arrived, is_out, joined_at
 		FROM participants ORDER BY id`)
 	if err != nil {
 		return nil, err
@@ -115,7 +130,7 @@ func (r *ParticipantRepo) ListAll(ctx context.Context) ([]domain.Participant, er
 
 func (r *ParticipantRepo) ListUpcomingForUser(ctx context.Context, userID string, fromDate time.Time) ([]domain.Participant, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT p.id, p.user_id, p.game_id, p.entries, p.rebuys, p.addons, p.final_points, p.position, p.joined_at
+		SELECT p.id, p.user_id, p.game_id, p.entries, p.rebuys, p.addons, p.final_points, p.position, p.arrived, p.is_out, p.joined_at
 		FROM participants p
 		INNER JOIN games g ON g.game_id = p.game_id
 		WHERE p.user_id = $1 AND g.date >= $2::date
@@ -150,4 +165,13 @@ func scanParticipantRows(rows pgx.Rows) ([]domain.Participant, error) {
 		out = append(out, *p)
 	}
 	return out, rows.Err()
+}
+
+func (r *ParticipantRepo) SetArrived(ctx context.Context, participantID int64, arrived bool) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE participants SET arrived = $2
+		WHERE id = $1`,
+		participantID, arrived,
+	)
+	return err
 }

@@ -11,6 +11,7 @@ type Participant struct {
 	Addons      int
 	FinalPoints int //
 	Position    *int
-	JoinedAt    time.Time
 	Arrived     bool
+	IsOut       bool
+	JoinedAt    time.Time
 }

@@ -2,13 +2,17 @@ package usecase
 
 import (
 	"context"
-	"encoding/json"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
 	"math"
 	"net/url"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pridecrm/app-backend/internal/domain"
@@ -21,15 +25,16 @@ var ErrNotFound = errors.New("not found")
 var ErrForbidden = errors.New("forbidden")
 
 type Service struct {
-	Users        repository.UserRepository
-	Games        repository.GameRepository
-	Participants repository.ParticipantRepository
-	Tickets      repository.SupportTicketRepository
-	Tournaments  repository.TournamentRepository
-	JWT          *auth.JWTService
-	Log          *slog.Logger
-	Clock        *services.Clock
-	Storage      Storage
+	Users            repository.UserRepository
+	Games            repository.GameRepository
+	Participants     repository.ParticipantRepository
+	Tickets          repository.SupportTicketRepository
+	Tournaments      repository.TournamentRepository
+	JWT              *auth.JWTService
+	Log              *slog.Logger
+	Clock            *services.Clock
+	Storage          Storage
+	AdminTelegramIDs map[string]bool
 }
 
 type Storage interface {
@@ -37,138 +42,128 @@ type Storage interface {
 }
 
 func (s *Service) issueToken(u *domain.User) (string, error) {
-	return s.JWT.Issue(u.UserID, true)
+	isAdmin := s.AdminTelegramIDs[u.UserID]
+
+	s.Log.Info("ISSUING TOKEN",
+		"user_id", u.UserID,
+		"is_admin", isAdmin,
+	)
+
+	return s.JWT.Issue(u.UserID, isAdmin)
 }
 
-func (s *Service) TelegramAuth(ctx context.Context, telegramData map[string]any) (token string, user *domain.User, isNew bool, err error) {
-	idVal, ok := telegramData["id"]
-	if !ok {
-		return "", nil, false, fmt.Errorf("missing id")
-	}
+func (s *Service) TelegramAuthUnsafe(
+	ctx context.Context,
+	user map[string]any,
+) (token string, dbUser *domain.User, isNew bool, err error) {
+	isNew = false
+	idVal := user["id"]
+	username, _ := user["username"].(string)
+	firstName, _ := user["first_name"].(string)
+	lastName, _ := user["last_name"].(string)
+	photoURL, _ := user["photo_url"].(string)
+
+	s.Log.Info("🚀 TELEGRAM AUTH START",
+		"id_raw", idVal,
+		"username", username,
+	)
+
 	userID, err := normalizeTelegramID(idVal)
-	username, _ := telegramData["username"].(string)
-	firstName, _ := telegramData["first_name"].(string)
-	lastName, _ := telegramData["last_name"].(string)
-	photoURL, _ := telegramData["photo_url"].(string)
+	if err != nil {
+		return "", nil, false, err
+	}
+
+	isAdmin := s.AdminTelegramIDs[userID]
+
+	s.Log.Info("TELEGRAM AUTH USER IDENTIFIED",
+		"user_id", userID,
+		"username", username,
+		"is_admin", isAdmin,
+	)
+
 	if username == "" {
 		username = userID
+		s.Log.Info("⚠️ Username empty → using userID as username", "user_id", userID)
 	}
 
 	existing, err := s.Users.GetByID(ctx, userID)
 	if err != nil {
+		s.Log.Error("❌ DB GetByID FAILED", "user_id", userID, "err", err)
 		return "", nil, false, err
 	}
+
 	if existing == nil {
-		u := &domain.User{
+		s.Log.Info("🆕 USER NOT FOUND → CREATING NEW", "user_id", userID)
+		isNew = true
+		newUser := &domain.User{
 			UserID:    userID,
 			Username:  username,
 			FirstName: strPtr(firstName),
 			LastName:  strPtr(lastName),
 			IsActive:  true,
-			PhotoURL:  strPtr(photoURL),
 		}
-		if err := s.Users.Create(ctx, u); err != nil {
-			return "", nil, false, err
+
+		if photoURL != "" {
+			newUser.PhotoURL = strPtr(photoURL)
 		}
-		token, err := s.issueToken(u)
-		return token, u, true, err
+
+		if err := s.Users.Create(ctx, newUser); err != nil {
+			s.Log.Error("❌ CREATE USER FAILED", "user_id", userID, "err", err)
+			return "", nil, isNew, err
+		}
+
+		token, err = s.issueToken(newUser)
+		if err != nil {
+			s.Log.Error("❌ ISSUE TOKEN FAILED (create)", "user_id", userID, "err", err)
+			return "", nil, isNew, err
+		}
+
+		s.Log.Info("✅ NEW USER CREATED SUCCESSFULLY",
+			"user_id", userID,
+			"has_photo", photoURL != "",
+		)
+
+		return token, newUser, isNew, err
 	}
+
+	s.Log.Info("USER FOUND → UPDATING", "user_id", userID)
+
+	oldPhoto := derefStrPtr(existing.PhotoURL)
+
+	existing.Username = username
 	existing.FirstName = strPtr(firstName)
 	existing.LastName = strPtr(lastName)
-	if username != "" {
-		existing.Username = username
-	}
-	if err := s.Users.Update(ctx, existing); err != nil {
-		return "", nil, false, err
-	}
-	token, err = s.issueToken(existing)
-	return token, existing, false, err
-}
 
-func (s *Service) TelegramValidateInitData(ctx context.Context, initData string) (token string, user *domain.User, err error) {
-	vals, err := url.ParseQuery(initData)
-	if err != nil {
-		return "", nil, fmt.Errorf("parse initData: %w", err)
-	}
-	userJSON := vals.Get("user")
-	if userJSON == "" {
-		return "", nil, fmt.Errorf("missing user")
-	}
-	var ud struct {
-		ID        json.RawMessage `json:"id"`
-		Username  string          `json:"username"`
-		FirstName string          `json:"first_name"`
-		LastName  string          `json:"last_name"`
-		PhotoURL  string          `json:"photo_url"`
-	}
-	if err := json.Unmarshal([]byte(userJSON), &ud); err != nil {
-		return "", nil, err
-	}
-
-	var telegramID string
-	var idStr string
-	if err := json.Unmarshal(ud.ID, &idStr); err == nil {
-		telegramID = idStr
+	if photoURL != "" {
+		existing.PhotoURL = strPtr(photoURL)
+		s.Log.Info(" PHOTO UPDATED", "user_id", userID, "new_photo_url", photoURL)
 	} else {
-		var idInt int64
-		if err := json.Unmarshal(ud.ID, &idInt); err == nil {
-			telegramID = strconv.FormatInt(idInt, 10)
-		} else {
-			var idFloat float64
-			if err := json.Unmarshal(ud.ID, &idFloat); err == nil {
-				telegramID = strconv.FormatInt(int64(idFloat), 10)
-			} else {
-				return "", nil, fmt.Errorf("invalid telegram id")
-			}
-		}
-	}
-	s.Log.Info("telegram validate", "id", telegramID)
-
-	if telegramID == "" {
-		return "", nil, fmt.Errorf("missing telegram id")
-	}
-	username := ud.Username
-	if username == "" {
-		username = "user_" + telegramID
+		s.Log.Info("No new photo_url → keeping existing photo",
+			"user_id", userID,
+			"kept_photo", oldPhoto,
+		)
 	}
 
-	existing, err := s.Users.GetByID(ctx, telegramID)
-	if err != nil {
-		s.Log.Error("DB ERROR", "err", err)
-		return "", nil, err
+	if err := s.Users.Update(ctx, existing); err != nil {
+		s.Log.Error("UPDATE USER FAILED", "user_id", userID, "err", err)
+		return "", nil, isNew, err
 	}
-	if existing == nil {
-		s.Log.Info("USER NOT FOUND -> CREATE")
-		u := &domain.User{
-			UserID:    telegramID,
-			Username:  username,
-			FirstName: strPtr(ud.FirstName),
-			LastName:  strPtr(ud.LastName),
-			PhotoURL:  strPtr(ud.PhotoURL),
-			IsActive:  true,
-		}
-		if err := s.Users.Create(ctx, u); err != nil {
-			s.Log.Error("CREATE USER FAILED", "err", err)
-			return "", nil, err
-		}
-		token, err := s.issueToken(u)
-		if err != nil {
-			s.Log.Error("TOKEN ISSUE FAILED", "err", err)
-			return "", nil, err
-		}
-		s.Log.Info("SUCCESS NEW USER", "token", token)
-		return token, u, err
-	}
+
 	token, err = s.issueToken(existing)
 	if err != nil {
-		s.Log.Error("TOKEN ISSUE FAILED", "err", err)
-		return "", nil, err
+		s.Log.Error("ISSUE TOKEN FAILED (update)", "user_id", userID, "err", err)
+		return "", nil, isNew, err
 	}
-	s.Log.Info("SUCCESS EXISTING USER", "token", token)
-	return token, existing, err
+
+	return token, existing, isNew, nil
+}
+func derefStrPtr(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
 }
 
-// RegisterParticipant creates a registration row; returns already=true if row existed.
 func (s *Service) RegisterParticipant(ctx context.Context, userID string, gameID int64) (already bool, err error) {
 	u, err := s.Users.GetByID(ctx, userID)
 	if err != nil {
@@ -345,28 +340,42 @@ func (s *Service) SetParticipantArrived(
 	participantID int64,
 	arrived bool,
 ) error {
+	p, err := s.Participants.GetByID(ctx, participantID)
+	if err != nil {
+		s.Log.Error("SetParticipantArrived: failed to get participant",
+			"participant_id", participantID,
+			"err", err)
+		return err
+	}
+	if p == nil {
+		s.Log.Error("SetParticipantArrived: participant not found",
+			"participant_id", participantID)
+		return ErrNotFound
+	}
 
-	//p, err := s.Participants.GetByID(ctx, participantID)
-	//if err != nil {
-	//	return err
-	//}
-	//if p == nil {
-	//	return ErrNotFound
-	//}
-	//
-	//p.Arrived = arrived
-	//
-	//if err := s.Participants.Update(ctx, p); err != nil {
-	//	return err
-	//}
-	//
-	//
+	// Update arrived status
+	if err := s.Participants.SetArrived(ctx, participantID, arrived); err != nil {
+		s.Log.Error("SetParticipantArrived: failed to update arrived status",
+			"participant_id", participantID,
+			"arrived", arrived,
+			"err", err)
+		return err
+	}
+
+	s.Log.Info("SetParticipantArrived: successfully updated arrived status",
+		"participant_id", participantID,
+		"user_id", p.UserID,
+		"game_id", p.GameID,
+		"arrived", arrived)
+
+	// Update game stats
 	//players, chips, err := s.calculateStats(ctx, p.GameID)
 	//if err != nil {
-	//	return err
-	//}
-	//
-	//if s.Clock != nil {
+	//	s.Log.Error("SetParticipantArrived: failed to calculate stats",
+	//		"game_id", p.GameID,
+	//		"err", err)
+	//	// Don't return error here, the main operation succeeded
+	//} else if s.Clock != nil {
 	//	go s.Clock.UpdateStats(ctx, fmt.Sprint(p.GameID), players, chips)
 	//}
 
@@ -412,4 +421,92 @@ func normalizeTelegramID(v any) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported telegram id type")
 	}
+}
+
+// validateTelegramWebAuthHash проверяет hash от Telegram Login Widget
+func (s *Service) validateTelegramWebAuthHash(queryParams url.Values, botToken string) error {
+	// Получаем hash из параметров
+	hash := queryParams.Get("hash")
+	if hash == "" {
+		return fmt.Errorf("hash not found")
+	}
+
+	// Создаем копию параметров без hash
+	authData := make(url.Values)
+	for key, values := range queryParams {
+		if key != "hash" {
+			authData[key] = values
+		}
+	}
+
+	// Собираем data_check_string в алфавитном порядке
+	var keys []string
+	for key := range authData {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	var dataCheckStrings []string
+	for _, key := range keys {
+		dataCheckStrings = append(dataCheckStrings, fmt.Sprintf("%s=%s", key, authData.Get(key)))
+	}
+	dataCheckString := strings.Join(dataCheckStrings, "\n")
+
+	// Создаем secret_key = SHA256(bot_token)
+	secretKey := sha256.Sum256([]byte(botToken))
+
+	// Создаем HMAC-SHA256(data_check_string, secret_key)
+	h := hmac.New(sha256.New, secretKey[:])
+	h.Write([]byte(dataCheckString))
+	calculatedHash := hex.EncodeToString(h.Sum(nil))
+
+	// Сравниваем hash
+	if !hmac.Equal([]byte(calculatedHash), []byte(hash)) {
+		return fmt.Errorf("invalid hash")
+	}
+
+	return nil
+}
+
+func (s *Service) TelegramWebAuth(
+	ctx context.Context,
+	queryParams url.Values,
+	botToken string,
+) (token string, dbUser *domain.User, isNew bool, err error) {
+	if err := s.validateTelegramWebAuthHash(queryParams, botToken); err != nil {
+		s.Log.Error("❌ TELEGRAM WEB AUTH HASH VALIDATION FAILED",
+			"err", err,
+			"query_params", sanitizeQueryParams(queryParams),
+		)
+		return "", nil, false, fmt.Errorf("invalid telegram auth data: %w", err)
+	}
+
+	s.Log.Info("✅ TELEGRAM WEB AUTH HASH VALIDATION SUCCESS")
+
+	user := make(map[string]any)
+	user["id"] = queryParams.Get("id")
+	user["username"] = queryParams.Get("username")
+	user["first_name"] = queryParams.Get("first_name")
+	user["last_name"] = queryParams.Get("last_name")
+	user["photo_url"] = queryParams.Get("photo_url")
+
+	s.Log.Info("🔐 TELEGRAM WEB AUTH USER DATA EXTRACTED",
+		"id", user["id"],
+		"username", user["username"],
+		"first_name", user["first_name"],
+	)
+
+	return s.TelegramAuthUnsafe(ctx, user)
+}
+
+func sanitizeQueryParams(params url.Values) map[string]string {
+	sanitized := make(map[string]string)
+	for key, values := range params {
+		if key == "hash" {
+			sanitized[key] = "***"
+		} else {
+			sanitized[key] = strings.Join(values, ",")
+		}
+	}
+	return sanitized
 }

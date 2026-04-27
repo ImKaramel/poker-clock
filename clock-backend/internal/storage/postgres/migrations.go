@@ -21,6 +21,8 @@ func RunMigrations(ctx context.Context, db *DB) error {
 		`CREATE TABLE IF NOT EXISTS levels (
 			id UUID PRIMARY KEY,
 			tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+			type VARCHAR NOT NULL DEFAULT 'level' CHECK (type IN ('level', 'break')),
+			name VARCHAR,
 			small_blind INT NOT NULL,
 			big_blind INT NOT NULL,
 			duration_minutes INT NOT NULL,
@@ -28,6 +30,11 @@ func RunMigrations(ctx context.Context, db *DB) error {
 		)`,
 		// indexes
 		`CREATE INDEX IF NOT EXISTS idx_levels_tournament_id ON levels(tournament_id)`,
+		`ALTER TABLE levels ADD COLUMN IF NOT EXISTS type VARCHAR NOT NULL DEFAULT 'level' CHECK (type IN ('level', 'break'))`,
+		`ALTER TABLE levels ADD COLUMN IF NOT EXISTS name VARCHAR`,
+
+		`CREATE INDEX IF NOT EXISTS idx_levels_type ON levels (type)`,
+		`CREATE INDEX IF NOT EXISTS idx_levels_name ON levels (name)`,
 	}
 
 	for _, q := range queries {

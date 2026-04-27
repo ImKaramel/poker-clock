@@ -35,7 +35,7 @@ type ParticipantRepository interface {
 	Create(ctx context.Context, p *domain.Participant) error
 	GetByID(ctx context.Context, id int64) (*domain.Participant, error)
 	GetByUserAndGame(ctx context.Context, userID string, gameID int64) (*domain.Participant, error)
-	Update(ctx context.Context, p *domain.Participant) error
+	Update(ctx context.Context, p *domain.Participant, rebuyDelta int) error
 	Delete(ctx context.Context, id int64) error
 	DeleteByUserAndGame(ctx context.Context, userID string, gameID int64) error
 	ListByGame(ctx context.Context, gameID int64) ([]domain.Participant, error)
@@ -44,6 +44,7 @@ type ParticipantRepository interface {
 	ListUpcomingForUser(ctx context.Context, userID string, fromDate time.Time) ([]domain.Participant, error)
 	Count(ctx context.Context) (int64, error)
 	CountByGame(ctx context.Context, gameID int64) (int64, error)
+	SetArrived(ctx context.Context, participantID int64, arrived bool) error
 }
 
 type SupportTicketRepository interface {

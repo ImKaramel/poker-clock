@@ -23,6 +23,9 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_url TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_nick_name_unique_ci
+    ON users (LOWER(nick_name))
+    WHERE nick_name IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS games (
     game_id SERIAL PRIMARY KEY,
@@ -55,6 +58,10 @@ CREATE TABLE IF NOT EXISTS participants (
     joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (user_id, game_id)
 );
+ALTER TABLE participants
+    ADD COLUMN IF NOT EXISTS arrived BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE participants
+    ADD COLUMN IF NOT EXISTS is_out BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS support_tickets (
     id BIGSERIAL PRIMARY KEY,
