@@ -35,3 +35,4 @@ deploy/.env
 /.idea/poker-clock.iml
 /.idea/go.imports.xml
 /.idea/modules.xml
+/.idea/dataSources.local.xml

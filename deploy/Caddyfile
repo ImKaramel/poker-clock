@@ -1,24 +1,16 @@
 api.midnight-club-app.ru {
 
-    log {
-        level INFO
-        output stdout
-    }
-
     encode gzip
 
-    header {
-            Access-Control-Allow-Origin "https://poker-clock-nine.vercel.app"
-            Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-            Access-Control-Allow-Headers "Origin, Content-Type, Authorization, Accept"
-            Access-Control-Allow-Credentials "false"
-            Access-Control-Max-Age "86400"
-        }
 
-        @options method OPTIONS
-        respond @options 204
+    handle /clock/* {
+                        reverse_proxy clock-backend:8081
+                    }
 
-        reverse_proxy app-backend:8080
-        reverse_proxy /clock/* clock-backend:8081
+    handle /api/* {
+                      reverse_proxy app-backend:8080
+                  }
+    handle {
+               respond "not found" 404
+           }
 }
-
