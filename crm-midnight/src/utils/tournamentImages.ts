@@ -10,6 +10,7 @@ import freeroll from '../assets/FREEROLL.jpg'
 import speed_racer from '../assets/SPEED RACER.jpg'
 import classic_holdem from '../assets/HOLDEM Classic.jpg'
 import midnight_poker from '../assets/MIDNIGHT Poker.jpg'
+import midnight_knokout from '../assets/MIDNIGHT KNOKOUT.jpg'
 
 // Создаем маппинг названий турниров на импортированные картинки
 const TOURNAMENT_IMAGES_MAP: Record<string, string> = {
@@ -20,7 +21,8 @@ const TOURNAMENT_IMAGES_MAP: Record<string, string> = {
   "FREEROLL": freeroll,
   "SPEED RACER": speed_racer,
   "HOLDEM CLASSIC": classic_holdem,
-  "MIDNIGHT Poker": midnight_poker
+  "MIDNIGHT Poker": midnight_poker,
+  "MIDNIGHT KNOKOUT": midnight_knokout
 };
 
 // Функция для получения картинки по названию турнира
