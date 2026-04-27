@@ -15,6 +15,34 @@ import (
 	"backend/internal/timer"
 )
 
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+
+		allowedOrigins := map[string]bool{
+			"http://localhost:3000":                   true,
+			"https://admin-panel-midnight.vercel.app": true,
+			"https://midnight-club-app.ru":            true,
+			"https://www.midnight-club-app.ru":        true,
+		}
+
+		if allowedOrigins[origin] {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
+
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	connString := os.Getenv("DATABASE_URL")
 	if connString == "" {
@@ -39,25 +67,27 @@ func main() {
 
 	timerManager := timer.NewManager(ctx, tournamentRepo, timerRepo)
 
-	tournamentService := service.NewTournamentService(tournamentRepo)
+	tournamentService := service.NewTournamentService(tournamentRepo, timerManager)
 	timerService := service.NewTimerService(tournamentRepo, timerRepo, timerManager)
 
-	r := api.NewRouter(tournamentService, timerService, timerManager)
+	router := api.NewRouter(tournamentService, timerService, timerManager)
+
+	handler := corsMiddleware(router)
 
 	srv := &http.Server{
 		Addr:    ":8081",
-		Handler: r,
+		Handler: handler,
 	}
 
 	go func() {
-		log.Println("server started on :8081")
+		log.Println("clock-backend started on :8081")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %v", err)
 		}
 	}()
 
 	<-ctx.Done()
-	log.Println("shutting down server...")
+	log.Println("shutting down clock-backend...")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -65,6 +95,6 @@ func main() {
 	timerManager.Stop()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("server shutdown error: %v", err)
+		log.Printf("shutdown error: %v", err)
 	}
 }

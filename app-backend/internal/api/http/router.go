@@ -18,8 +18,8 @@ func Mount(
 
 	api := r.Group("/api")
 
-	api.POST("/auth/telegram/", h.TelegramAuth)
-	api.POST("/auth/telegram/validate/", h.TelegramValidate)
+	api.POST("/auth/telegram", h.TelegramAuth)
+	api.GET("/auth/telegram/callback", h.TelegramWebAuthCallback)
 
 	opt := auth.MiddlewareJWTOptional(jwt, log)
 	jwtMW := auth.MiddlewareJWT(jwt, log)
@@ -67,7 +67,12 @@ func Mount(
 		part.PATCH("/:id", h.UpdateParticipant)
 		part.PUT("/:id", h.UpdateParticipant)
 		part.DELETE("/:id", h.DeleteParticipant)
-		part.POST("/:id/arrived", h.SetParticipantArrived)
+	}
+
+	partAdm := api.Group("/participants")
+	partAdm.Use(jwtMW, adm)
+	{
+		partAdm.POST("/:id/arrived", h.SetParticipantArrived)
 	}
 
 	tick := api.Group("/support-tickets")

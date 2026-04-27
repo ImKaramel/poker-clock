@@ -24,13 +24,15 @@ func NewRouter(
 	levelHandler := handlers.NewLevelHandler(tournamentService)
 	timerHandler := handlers.NewTimerHandler(timerService)
 
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+	clock := chi.NewRouter()
+
+	clock.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
 
-	r.Post("/auth/login", authHandler.Login)
+	clock.Post("/auth/login", authHandler.Login)
 
-	r.Route("/tournaments", func(r chi.Router) {
+	clock.Route("/tournaments", func(r chi.Router) {
 		r.Use(auth.AdminAuth)
 
 		r.Post("/", tournamentHandler.CreateTournament)
@@ -38,8 +40,10 @@ func NewRouter(
 
 		r.Route("/{id}", func(r chi.Router) {
 			r.Get("/", tournamentHandler.GetTournament)
+			r.Delete("/", tournamentHandler.DeleteTournament)
 			r.Post("/levels", levelHandler.AddLevel)
 			r.Get("/levels", levelHandler.ListLevels)
+			r.Delete("/levels/{levelId}", levelHandler.DeleteLevel)
 
 			r.Post("/start", timerHandler.StartTournament)
 			r.Post("/pause", timerHandler.PauseTournament)
@@ -49,7 +53,9 @@ func NewRouter(
 		})
 	})
 
-	r.Get("/tournaments/{id}/timer/ws", timerHandler.TimerWS)
+	clock.Get("/tournaments/{id}/timer/ws", timerHandler.TimerWS)
+
+	r.Mount("/clock", clock)
 
 	return r
 }

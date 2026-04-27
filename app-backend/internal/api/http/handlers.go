@@ -13,9 +13,11 @@ import (
 )
 
 type Handlers struct {
-	Log  *slog.Logger
-	UC   *usecase.Service
-	Repo struct {
+	Log              *slog.Logger
+	UC               *usecase.Service
+	TelegramBotToken string
+	FrontendURL      string
+	Repo             struct {
 		Users        repository.UserRepository
 		Games        repository.GameRepository
 		Participants repository.ParticipantRepository

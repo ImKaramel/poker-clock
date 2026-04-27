@@ -1,11 +1,13 @@
 package httpapi
 
 import (
-	"github.com/gin-gonic/gin"
-	infraauth "github.com/pridecrm/app-backend/internal/infrastructure/auth"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	infraauth "github.com/pridecrm/app-backend/internal/infrastructure/auth"
 )
 
 func (h *Handlers) Rating(c *gin.Context) {
@@ -101,6 +103,12 @@ func (h *Handlers) ProfilePatch(c *gin.Context) {
 		}
 	}
 	if err := h.Repo.Users.Update(c.Request.Context(), u); err != nil {
+		if strings.Contains(err.Error(), "unique") {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "nickname already taken",
+			})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

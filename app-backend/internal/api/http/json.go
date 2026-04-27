@@ -10,6 +10,7 @@ func userToMap(u *domain.User) map[string]any {
 	if u == nil {
 		return nil
 	}
+
 	m := map[string]any{
 		"user_id":            u.UserID,
 		"username":           u.Username,
@@ -37,7 +38,17 @@ func userToMap(u *domain.User) map[string]any {
 	if u.DateOfBirth != nil {
 		m["date_of_birth"] = u.DateOfBirth.Format("2006-01-02")
 	}
+
+	m["photo_url"] = derefStr(u.PhotoURL)
+
 	return m
+}
+
+func derefStr(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
 }
 
 func gameToMap(g *domain.Game, participantsCount int64, details []map[string]any) map[string]any {

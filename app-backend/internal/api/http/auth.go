@@ -1,61 +1,109 @@
 package httpapi
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 )
 
-type telegramBody struct {
-	TelegramData map[string]any `json:"telegram_data"`
-}
-
 func (h *Handlers) TelegramAuth(c *gin.Context) {
-	var body telegramBody
-	if err := c.ShouldBindJSON(&body); err != nil || body.TelegramData == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Telegram data required"})
-		return
+	var body struct {
+		User map[string]any `json:"user"`
 	}
-	token, u, isNew, err := h.UC.TelegramAuth(c.Request.Context(), body.TelegramData)
-	if err != nil {
-		h.Log.Error("telegram auth", "err", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
-		return
-	}
-	//photoURL, _ := telegramData["photo_url"].(string)
-	c.JSON(http.StatusOK, gin.H{
-		"token":  token,
-		"user":   userToMap(u),
-		"is_new": isNew,
-	})
-}
 
-type validateBody struct {
-	InitData string `json:"initData"`
-}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		h.Log.Error("INVALID JSON",
+			"err", err,
+		)
 
-func (h *Handlers) TelegramValidate(c *gin.Context) {
-	var body validateBody
-	if err := c.ShouldBindJSON(&body); err != nil || body.InitData == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing initData"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid json",
+			"details": err.Error(),
+		})
 		return
 	}
-	token, u, err := h.UC.TelegramValidateInitData(c.Request.Context(), body.InitData)
+
+	if body.User == nil {
+		h.Log.Error("USER IS NULL")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "user is null",
+		})
+		return
+	}
+
+	h.Log.Info("TELEGRAM AUTH REQUEST OK",
+		"user", body.User,
+	)
+
+	token, u, isNew, err := h.UC.TelegramAuthUnsafe(c.Request.Context(), body.User)
 	if err != nil {
-		h.Log.Error("telegram validate", "err", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Auth failed: " + err.Error()})
+		h.Log.Error("❌ AUTH FAILED", "err", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	h.Log.Info("TOKEN GENERATED", "token", token, "user", u.UserID)
+	h.Log.Info("isNew TELEGRAM AUTH REQUEST OK",
+		"user", body.User,
+		"isNew", isNew,
+		"token", token,
+	)
+
 	c.JSON(http.StatusOK, gin.H{
 		"token": token,
-		"user": gin.H{
-			"username":    u.Username,
-			"first_name":  derefStrPtr(u.FirstName),
-			"last_name":   derefStrPtr(u.LastName),
-			"telegram_id": u.UserID,
-			"id":          u.UserID,
-			"photo_url":   derefStrPtr(u.PhotoURL),
-		},
+		"user":  userToMap(u),
+		"isNew": isNew,
 	})
+}
+
+// TelegramWebAuthCallback - GET /api/auth/telegram/callback
+func (h *Handlers) TelegramWebAuthCallback(c *gin.Context) {
+	botToken := h.TelegramBotToken
+
+	if botToken == "" {
+		h.Log.Error("telegram bot token is empty")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "server configuration error",
+		})
+		return
+	}
+
+	h.Log.Info("TELEGRAM WEB AUTH CALLBACK REQUEST",
+		"query_params", c.Request.URL.RawQuery,
+	)
+
+	token, user, isNew, err := h.UC.TelegramWebAuth(
+		c.Request.Context(),
+		c.Request.URL.Query(),
+		botToken,
+	)
+
+	if err != nil {
+		h.Log.Error("❌ TELEGRAM WEB AUTH FAILED",
+			"err", err,
+		)
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	h.Log.Info("✅ TELEGRAM WEB AUTH SUCCESS",
+		"user_id", user.UserID,
+		"username", user.Username,
+		"is_new", isNew,
+	)
+
+	redirectURL := fmt.Sprintf(
+		"https://www.midnight-club-app.ru/web-auth?token=%s",
+		//h.FrontendURL,
+		url.QueryEscape(token),
+	)
+
+	h.Log.Info("➡️ Redirecting to",
+		"url", redirectURL,
+	)
+
+	c.Redirect(http.StatusFound, redirectURL)
 }

@@ -8,10 +8,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/pridecrm/app-backend/internal/infrastructure/storageS3"
 
-	//"github.com/gin-contrib/cors"
 	httpdelivery "github.com/pridecrm/app-backend/internal/api/http"
 	"github.com/pridecrm/app-backend/internal/infrastructure/auth"
 	"github.com/pridecrm/app-backend/internal/infrastructure/db"
@@ -68,19 +68,31 @@ func main() {
 	srepo := postgres.NewSupportRepo(pool)
 	trepo := postgres.NewTournamentRepo(pool)
 
-	uc := &usecase.Service{
-		Users:        urepo,
-		Games:        grepo,
-		Participants: prepo,
-		Tickets:      srepo,
-		Tournaments:  trepo,
-		JWT:          jwtSvc,
-		Log:          log,
-		Clock:        clock,
-		Storage:      s3Storage,
+	adminIDsMap := make(map[string]bool)
+	for _, id := range cfg.AdminTelegramIDs {
+		adminIDsMap[id] = true
 	}
 
-	h := &httpdelivery.Handlers{Log: log, UC: uc}
+	uc := &usecase.Service{
+		Users:            urepo,
+		Games:            grepo,
+		Participants:     prepo,
+		Tickets:          srepo,
+		Tournaments:      trepo,
+		JWT:              jwtSvc,
+		Log:              log,
+		Clock:            clock,
+		Storage:          s3Storage,
+		AdminTelegramIDs: adminIDsMap,
+	}
+
+	h := &httpdelivery.Handlers{
+		Log: log,
+		UC:  uc,
+
+		TelegramBotToken: cfg.TelegramBotToken,
+		FrontendURL:      cfg.FrontendURL,
+	}
 	h.Repo.Users = urepo
 	h.Repo.Games = grepo
 	h.Repo.Participants = prepo
@@ -92,38 +104,41 @@ func main() {
 	engine.Use(gin.Recovery())
 	engine.Use(httpdelivery.RequestLogger(log))
 
-	//engine.Use(cors.New(cors.Config{
-	//
-	//	AllowOrigins: []string{
-	//		"https://poker-clock-nine.vercel.app",
-	//		"https://api.midnight-club.ru",
-	//		"http://localhost:3000",
-	//		"http://localhost:8080",
-	//	},
-	//	AllowMethods: []string{
-	//		"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD",
-	//	},
-	//	AllowHeaders: []string{
-	//		"Origin",
-	//		"Content-Type",
-	//		"Authorization",
-	//		"Accept",
-	//		"X-Requested-With",
-	//	},
-	//	ExposeHeaders: []string{
-	//		"Content-Length",
-	//		"Authorization",
-	//	},
-	//	AllowCredentials: true,
-	//	MaxAge:           12 * time.Hour,
-	//}))
+	engine.Use(cors.New(cors.Config{
+
+		AllowOrigins: []string{
+			"https://poker-clock-nine.vercel.app",
+			"https://api.midnight-club-app.ru",
+			"https://admin-panel-midnight.vercel.app",
+			"http://localhost:3000",
+			"http://localhost:8080",
+			"https://midnight-club-app.ru",
+			"https://www.midnight-club-app.ru",
+		},
+		AllowMethods: []string{
+			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD",
+		},
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Authorization",
+			"Accept",
+			"X-Requested-With",
+		},
+		ExposeHeaders: []string{
+			"Content-Length",
+			"Authorization",
+		},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 	engine.RedirectTrailingSlash = true
-	//engine.OPTIONS("/*path", func(c *gin.Context) {
-	//	c.Status(204)
-	//})
-	//engine.GET("/health", func(c *gin.Context) {
-	//	c.JSON(200, gin.H{"status": "ok"})
-	//})
+	engine.OPTIONS("/*path", func(c *gin.Context) {
+		c.Status(204)
+	})
+	// engine.GET("/health", func(c *gin.Context) {
+	//      c.JSON(200, gin.H{"status": "ok"})
+	// })
 
 	httpdelivery.Mount(engine, h, jwtSvc, log)
 

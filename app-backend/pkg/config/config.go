@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -13,8 +14,10 @@ type Config struct {
 	JWTTTL      time.Duration
 
 	TelegramBotToken    string
+	FrontendURL         string
 	TelegramBotUsername string
 	MiniAppURL          string
+	AdminTelegramIDs    []string
 }
 
 func Load() Config {
@@ -30,6 +33,18 @@ func Load() Config {
 		}
 	}
 
+	adminIDsStr := os.Getenv("ADMIN_TELEGRAM_IDS")
+	var adminIDs []string
+	if adminIDsStr != "" {
+		parts := strings.Split(adminIDsStr, ",")
+		for _, part := range parts {
+			id := strings.TrimSpace(part)
+			if id != "" {
+				adminIDs = append(adminIDs, id)
+			}
+		}
+	}
+
 	return Config{
 		Addr:        ":" + port,
 		DatabaseURL: os.Getenv("DATABASE_URL"),
@@ -37,7 +52,9 @@ func Load() Config {
 		JWTTTL:      ttl,
 
 		TelegramBotToken:    os.Getenv("TELEGRAM_BOT_TOKEN"),
+		FrontendURL:         os.Getenv("FRONTEND_URL"),
 		TelegramBotUsername: os.Getenv("TELEGRAM_BOT_USERNAME"),
 		MiniAppURL:          os.Getenv("MINI_APP_URL"),
+		AdminTelegramIDs:    adminIDs,
 	}
 }
