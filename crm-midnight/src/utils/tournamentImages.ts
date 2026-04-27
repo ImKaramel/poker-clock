@@ -6,6 +6,10 @@ import midnight_phoenix from "../assets/MIDNIGHT Phoenix.jpg";
 import deep_stack from "../assets/DEEP STACK.jpg";
 import freezout from "../assets/FREEZOUT.jpg";
 import midnight_gift from "../assets/MIDNIGHT Gift.jpg";
+import freeroll from '../assets/FREEROLL.jpg'
+import speed_racer from '../assets/SPEED RACER.jpg'
+import classic_holdem from '../assets/HOLDEM Classic.jpg'
+import midnight_poker from '../assets/MIDNIGHT Poker.jpg'
 
 // Создаем маппинг названий турниров на импортированные картинки
 const TOURNAMENT_IMAGES_MAP: Record<string, string> = {
@@ -13,6 +17,10 @@ const TOURNAMENT_IMAGES_MAP: Record<string, string> = {
   "DEEP STACK": deep_stack,
   "FREEZOUT": freezout,
   "MIDNIGHT Gift": midnight_gift,
+  "FREEROLL": freeroll,
+  "SPEED RACER": speed_racer,
+  "HOLDEM CLASSIC": classic_holdem,
+  "MIDNIGHT Poker": midnight_poker
 };
 
 // Функция для получения картинки по названию турнира
