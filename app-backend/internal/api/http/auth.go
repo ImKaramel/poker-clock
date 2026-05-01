@@ -144,11 +144,18 @@ func (h *Handlers) RegisterPassword(c *gin.Context) {
 		return
 	}
 
-	token, u, err := h.UC.RegisterPasswordUser(c.Request.Context(), body.TelegramUsername, body.Nickname, body.Password)
+	authenticatedUserID, _ := infraauth.UserIDFromContext(c)
+	token, u, err := h.UC.RegisterPasswordUser(
+		c.Request.Context(),
+		body.TelegramUsername,
+		body.Nickname,
+		body.Password,
+		authenticatedUserID,
+	)
 	if err != nil {
 		passwordAuthLimiter.fail(key)
 		status := http.StatusBadRequest
-		if errors.Is(err, usecase.ErrUserAlreadyExists) {
+		if errors.Is(err, usecase.ErrUserAlreadyExists) || errors.Is(err, usecase.ErrAccountMismatch) || errors.Is(err, usecase.ErrPasswordLinked) {
 			status = http.StatusConflict
 		}
 		c.JSON(status, gin.H{"error": authGenericError})

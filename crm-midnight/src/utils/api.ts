@@ -26,8 +26,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
+    const requestUrl = String(error.config?.url || '');
+    const isPasswordAuthRequest =
+      requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
 
-    if (status === 401) {
+    if (status === 401 && !isPasswordAuthRequest) {
       localStorage.removeItem('auth_token');
       return Promise.reject(error);
     }

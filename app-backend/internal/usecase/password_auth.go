@@ -18,6 +18,7 @@ var (
 	ErrInvalidAuthInput   = errors.New("invalid auth input")
 	ErrUserAlreadyExists  = errors.New("user already exists")
 	ErrPasswordLinked     = errors.New("password already linked")
+	ErrAccountMismatch    = errors.New("account mismatch")
 )
 
 var telegramUsernameRE = regexp.MustCompile(`^[a-z0-9_]{5,32}$`)
@@ -75,7 +76,7 @@ func fallbackUserID(username string) (string, error) {
 	return "fallback_" + username + "_" + hex.EncodeToString(b[:]), nil
 }
 
-func (s *Service) RegisterPasswordUser(ctx context.Context, username string, nickname string, password string) (string, *domain.User, error) {
+func (s *Service) RegisterPasswordUser(ctx context.Context, username string, nickname string, password string, authenticatedUserID string) (string, *domain.User, error) {
 	username = normalizeFallbackUsername(username)
 	nickname = strings.TrimSpace(nickname)
 
@@ -88,7 +89,31 @@ func (s *Service) RegisterPasswordUser(ctx context.Context, username string, nic
 		return "", nil, err
 	}
 	if existing != nil {
-		return "", nil, ErrUserAlreadyExists
+		if authenticatedUserID == "" {
+			return "", nil, ErrUserAlreadyExists
+		}
+		if existing.UserID != authenticatedUserID {
+			return "", nil, ErrAccountMismatch
+		}
+		if existing.Password != "" {
+			return "", nil, ErrPasswordLinked
+		}
+
+		passwordHash, err := hashPassword(password)
+		if err != nil {
+			return "", nil, err
+		}
+		existing.Password = passwordHash
+		existing.NickName = &nickname
+		if err := s.Users.Update(ctx, existing); err != nil {
+			return "", nil, err
+		}
+
+		token, err := s.issueToken(existing)
+		if err != nil {
+			return "", nil, err
+		}
+		return token, existing, nil
 	}
 
 	passwordHash, err := hashPassword(password)

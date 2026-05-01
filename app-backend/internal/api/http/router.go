@@ -17,15 +17,14 @@ func Mount(
 	r.GET("/health", h.Health)
 
 	api := r.Group("/api")
-
-	api.POST("/auth/telegram", h.TelegramAuth)
-	api.GET("/auth/telegram/callback", h.TelegramWebAuthCallback)
-	api.POST("/auth/register", h.RegisterPassword)
-	api.POST("/auth/login", h.LoginPassword)
-
 	opt := auth.MiddlewareJWTOptional(jwt, log)
 	jwtMW := auth.MiddlewareJWT(jwt, log)
 	adm := auth.MiddlewareAdmin(log)
+
+	api.POST("/auth/telegram", h.TelegramAuth)
+	api.GET("/auth/telegram/callback", h.TelegramWebAuthCallback)
+	api.POST("/auth/register", opt, h.RegisterPassword)
+	api.POST("/auth/login", h.LoginPassword)
 
 	api.GET("/games", opt, h.ListGames)
 	api.GET("/games/:id", opt, h.GetGame)
