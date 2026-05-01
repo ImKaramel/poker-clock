@@ -62,6 +62,20 @@ export const authAPI = {
   telegramInitAuth: (user: any) => {
     return api.post("/auth/telegram", user);
   },
+  login: (data: { telegram_username: string; password: string }) => {
+    return api.post("/auth/login", data);
+  },
+  register: (data: {
+    telegram_username: string;
+    nickname: string;
+    password: string;
+    confirm_password: string;
+  }) => {
+    return api.post("/auth/register", data);
+  },
+  linkPassword: (data: { password: string; confirm_password: string }) => {
+    return api.post("/auth/link-password", data);
+  },
 };
 export const adminAPI = {
    dashboard: () => {

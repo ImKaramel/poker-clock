@@ -23,6 +23,21 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_url TEXT;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM (
+            SELECT LOWER(username)
+            FROM users
+            GROUP BY LOWER(username)
+            HAVING COUNT(*) > 1
+        ) duplicate_usernames
+    ) THEN
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_users_telegram_username_unique_ci
+            ON users (LOWER(username));
+    END IF;
+END $$;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_nick_name_unique_ci
     ON users (LOWER(nick_name))
     WHERE nick_name IS NOT NULL;

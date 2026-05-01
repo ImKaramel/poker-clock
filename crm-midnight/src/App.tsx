@@ -118,7 +118,7 @@ const App: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [isReady, isTelegram, user]);
+  }, [isReady, isTelegram, user, location.pathname]);
 
   if (!isReady || isLoadingAuthCheck) {
     return (
@@ -132,15 +132,9 @@ const App: React.FC = () => {
   }
 
   if (authError) {
-    return (
-      <Loader>
-        <h2>❌ Ошибка авторизации</h2>
-        <p>{authError}</p>
-        <button onClick={() => window.location.reload()}>
-          Перезапустить
-        </button>
-      </Loader>
-    );
+    if (location.pathname !== "/web-auth") {
+      return <Navigate to="/web-auth" replace state={{ authError }} />;
+    }
   }
 
   if (!isAuthenticated && !isTelegram && location.pathname !== "/web-auth") {

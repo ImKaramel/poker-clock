@@ -20,6 +20,8 @@ func Mount(
 
 	api.POST("/auth/telegram", h.TelegramAuth)
 	api.GET("/auth/telegram/callback", h.TelegramWebAuthCallback)
+	api.POST("/auth/register", h.RegisterPassword)
+	api.POST("/auth/login", h.LoginPassword)
 
 	opt := auth.MiddlewareJWTOptional(jwt, log)
 	jwtMW := auth.MiddlewareJWT(jwt, log)
@@ -101,6 +103,7 @@ func Mount(
 	authed := api.Group("")
 	authed.Use(jwtMW)
 	{
+		authed.POST("/auth/link-password", h.LinkPassword)
 		authed.GET("/rating", h.Rating)
 		authed.GET("/profile", h.ProfileGet)
 		authed.PATCH("/profile", h.ProfilePatch)
