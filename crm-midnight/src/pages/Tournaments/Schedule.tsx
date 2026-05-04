@@ -24,6 +24,7 @@ export default function Schedule() {
   const [games, setGames] = useState<GameType[]>();
   const [history, setHistory] = useState<TournamentHistoryType[]>([]);
   const [tab, setTab] = useState<"current" | "past">("current");
+  const [selectedHistory, setSelectedHistory] = useState<TournamentHistoryType | null>(null);
 
   useEffect(() => {
     const getGames = async () => {
@@ -127,39 +128,49 @@ export default function Schedule() {
 
       {tab === "past" &&
         recentHistory.map((item) => (
-          <TournamentCardContainer key={item.id} style={pastCardStyle}>
+          <TournamentCardContainer
+            key={item.id}
+            style={pastCardStyle}
+            onClick={() => setSelectedHistory(item)}
+          >
             <div style={pastInfoStyle}>
-              <TournamentName style={pastNameStyle}>{item.tournament_name}</TournamentName>
-              <div style={pastMetaRowStyle}>
-                <TimeContainer style={pastTimeContainerStyle}>
-                  <div style={iconBoxStyle}>
-                    <Calendar />
-                  </div>
-                  <TimeTitle>{formatDate(item.date)}</TimeTitle>
-                </TimeContainer>
-                <TimeContainer style={pastTimeContainerStyle}>
-                  <div style={iconBoxStyle}>
-                    <Time />
-                  </div>
-                  <TimeTitle>{formatTime(item.time || undefined)}</TimeTitle>
-                </TimeContainer>
-              </div>
-              <div style={resultStyle}>
-                {item.participants_count} игроков
-                {item.participants?.length
-                  ? ` · ${item.participants
-                      .slice()
-                      .sort((a, b) => (a.position || 999) - (b.position || 999))
-                      .slice(0, 3)
-                      .map((p) => `${p.position ? `${p.position}. ` : ""}${p.first_name || p.username}${p.final_points ? ` (${p.final_points})` : ""}`)
-                      .join(", ")}`
-                  : ""}
-              </div>
+              <TournamentName style={pastOnlyNameStyle}>{item.tournament_name}</TournamentName>
             </div>
             <img src={tournament_image} alt="img" style={pastImageStyle} />
           </TournamentCardContainer>
         ))}
       {!!error && <div style={{ color: "#ff8585", padding: 16 }}>{String(error)}</div>}
+
+      {selectedHistory && (
+        <div style={overlayStyle} onClick={() => setSelectedHistory(null)}>
+          <div style={modalStyle} onClick={(event) => event.stopPropagation()}>
+            <div style={modalHeaderStyle}>
+              <div style={modalTitleStyle}>{selectedHistory.tournament_name}</div>
+              <button type="button" style={closeButtonStyle} onClick={() => setSelectedHistory(null)}>
+                x
+              </button>
+            </div>
+
+            <div style={playersListStyle}>
+              {selectedHistory.participants
+                .slice()
+                .sort((a, b) => {
+                  const aPoints = a.final_points || 0;
+                  const bPoints = b.final_points || 0;
+                  return bPoints - aPoints;
+                })
+                .map((player, index) => (
+                  <div key={player.id} style={playerRowStyle}>
+                    <div style={playerNameStyle}>
+                      {index + 1}. {player.first_name || player.username}
+                    </div>
+                    <div style={playerPointsStyle}>{player.final_points || 0}</div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
     </TournamentsContainer>
   );
 }
@@ -185,35 +196,26 @@ const inactiveTabStyle = {
   cursor: "pointer",
 };
 
-const resultStyle = {
-  color: "#ffffff99",
-  fontSize: 12,
-  lineHeight: "16px",
-  whiteSpace: "nowrap" as const,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  maxWidth: "100%",
-};
-
 const pastCardStyle = {
-  minHeight: 96,
-  height: "auto",
-  alignItems: "stretch",
+  minHeight: 88,
+  height: 88,
+  alignItems: "center",
   justifyContent: "space-between",
   overflow: "hidden",
   boxSizing: "border-box" as const,
+  cursor: "pointer",
 };
 
 const pastInfoStyle = {
   minWidth: 0,
   flex: "1 1 auto",
-  padding: "18px 12px 16px 20px",
+  padding: "18px 12px 18px 20px",
   display: "flex",
   flexDirection: "column" as const,
-  gap: 8,
+  justifyContent: "center",
 };
 
-const pastNameStyle = {
+const pastOnlyNameStyle = {
   height: "auto",
   minHeight: 0,
   lineHeight: "20px",
@@ -223,23 +225,88 @@ const pastNameStyle = {
   overflow: "hidden",
 };
 
-const pastMetaRowStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 14,
-  minWidth: 0,
-};
-
-const pastTimeContainerStyle = {
-  justifyContent: "flex-start",
-  width: "auto",
-  minWidth: 0,
-};
-
 const pastImageStyle = {
   width: 112,
   minWidth: 112,
   height: "100%",
   objectFit: "cover" as const,
   opacity: 0.72,
+};
+
+const overlayStyle = {
+  position: "fixed" as const,
+  inset: 0,
+  background: "rgba(0, 0, 0, 0.72)",
+  zIndex: 30,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 20,
+};
+
+const modalStyle = {
+  width: "100%",
+  maxWidth: 420,
+  maxHeight: "80vh",
+  overflow: "auto",
+  background: "#151A22",
+  borderRadius: 24,
+  padding: 20,
+  boxSizing: "border-box" as const,
+};
+
+const modalHeaderStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: 12,
+  marginBottom: 18,
+};
+
+const modalTitleStyle = {
+  color: "#fff",
+  fontSize: 22,
+  lineHeight: "28px",
+  fontWeight: 600,
+};
+
+const closeButtonStyle = {
+  border: "none",
+  background: "transparent",
+  color: "#ffffff99",
+  fontSize: 24,
+  lineHeight: "24px",
+  cursor: "pointer",
+  padding: 0,
+};
+
+const playersListStyle = {
+  display: "flex",
+  flexDirection: "column" as const,
+  gap: 10,
+};
+
+const playerRowStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  padding: "12px 14px",
+  borderRadius: 14,
+  background: "rgba(255,255,255,0.04)",
+};
+
+const playerNameStyle = {
+  color: "#fff",
+  fontSize: 15,
+  lineHeight: "20px",
+  minWidth: 0,
+};
+
+const playerPointsStyle = {
+  color: "#fff",
+  fontSize: 15,
+  lineHeight: "20px",
+  fontWeight: 700,
+  flexShrink: 0,
 };
