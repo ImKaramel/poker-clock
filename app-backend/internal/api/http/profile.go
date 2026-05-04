@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -12,7 +13,16 @@ import (
 )
 
 func (h *Handlers) Rating(c *gin.Context) {
-	users, err := h.Repo.Users.ListForRating(c.Request.Context())
+	month := time.Now()
+	if raw := c.Query("month"); raw != "" {
+		parsed, err := time.Parse("2006-01", raw)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid month"})
+			return
+		}
+		month = parsed
+	}
+	users, err := h.Repo.Users.ListForRatingByMonth(c.Request.Context(), month)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -149,6 +159,56 @@ func (h *Handlers) ProfilePatch(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, userToMap(u))
+}
+
+func (h *Handlers) ProfileAvatarUpload(c *gin.Context) {
+	uid, ok := infraauth.UserIDFromContext(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "auth required"})
+		return
+	}
+	u, err := h.Repo.Users.GetByID(c.Request.Context(), uid)
+	if err != nil || u == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	fileHeader, err := c.FormFile("avatar")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "avatar required"})
+		return
+	}
+	if fileHeader.Size > 5*1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "avatar too large"})
+		return
+	}
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid avatar"})
+		return
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(io.LimitReader(file, 5*1024*1024+1))
+	if err != nil || len(data) == 0 || len(data) > 5*1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid avatar"})
+		return
+	}
+	if h.UC.Storage == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "storage unavailable"})
+		return
+	}
+	url, err := h.UC.Storage.UploadAvatar(c.Request.Context(), uid, data)
+	if err != nil {
+		h.Log.Error("avatar upload", slog.Any("err", err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to upload avatar"})
+		return
+	}
+	u.PhotoURL = &url
+	if err := h.Repo.Users.Update(c.Request.Context(), u); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"user": userToMap(u), "photo_url": url})
 }
 
 func (h *Handlers) AdminDashboard(c *gin.Context) {

@@ -97,22 +97,35 @@ export const gamesAPI = {
     api.get(`/games/${gameId}/participants_admin`),
 };
 
+export const tournamentHistoryAPI = {
+  getHistory: () => api.get('/tournament-history'),
+  getHistoryById: (id: number) => api.get(`/tournament-history/${id}`),
+  getParticipants: (id: number) => api.get(`/tournament-history/${id}/participants`),
+};
+
 export const ratingAPI = {
-  getRating: () => api.get('/rating'),
+  getRating: (month?: string) => api.get('/rating', { params: month ? { month } : undefined }),
 };
 
 export const profileAPI = {
   getProfile: () => api.get('/profile'),
   updateProfile: async (nick_name: string) => {
     try {
-      return await api.patch('/profile/', { nick_name });
+      return await api.patch('/profile', { nick_name });
     } catch (error: any) {
       const status = error?.response?.status;
       if (status === 404 || status === 405) {
-        return api.patch('/profile', { nick_name });
+        return api.patch('/profile/', { nick_name });
       }
       throw error;
     }
+  },
+  uploadAvatar: (file: File) => {
+    const data = new FormData();
+    data.append('avatar', file);
+    return api.post('/profile/avatar', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
   },
 };
 

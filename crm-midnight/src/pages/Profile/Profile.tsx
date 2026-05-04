@@ -31,10 +31,10 @@ import {
   TournamentCardContainer,
   TournamentName,
 } from "../Tournaments/styles";
-import { Calendar, Check, X } from "lucide-react";
+import { Camera, Calendar, Check, X } from "lucide-react";
 import { ReactComponent as Time } from "../../assets/time.svg";
 import tournament_image from "../../assets/tournament_image.png";
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { profileAPI, ratingAPI } from "../../utils/api";
 import { ProfileType, RatingType } from "../../types";
 import { ReactComponent as EditButton } from "../../assets/edit.svg";
@@ -49,6 +49,7 @@ export default function Profile() {
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [edited, setEdited] = useState<boolean>(false);
   const [isSavingNickname, setIsSavingNickname] = useState<boolean>(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
   const [nick_name, setNick_name] = useState<string>("");
   const [historyTab, setHistoryTab] = useState<"active" | "past">("active");
 
@@ -138,6 +139,37 @@ export default function Profile() {
     }
   };
 
+  const uploadAvatar = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Можно загрузить только изображение");
+      return;
+    }
+
+    try {
+      setIsUploadingAvatar(true);
+      setError("");
+      const response = await profileAPI.uploadAvatar(file);
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              user: response.data.user || {
+                ...prev.user,
+                photo_url: response.data.photo_url,
+              },
+            }
+          : prev
+      );
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || "Не удалось загрузить фото");
+    } finally {
+      setIsUploadingAvatar(false);
+      event.target.value = "";
+    }
+  };
+
   const formatTime = (timeStr?: string) => {
     if (!timeStr) return "Время не указано";
     if (timeStr.includes(":")) {
@@ -180,6 +212,16 @@ export default function Profile() {
             style={{ width: "auto" }}
             alt="avatar"
           />
+          <label style={avatarUploadStyle}>
+            <Camera size={18} />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={uploadAvatar}
+              disabled={isUploadingAvatar}
+              style={{ display: "none" }}
+            />
+          </label>
           <Overlay />
           <InfoWrapper>
             {!edited ? (
@@ -338,4 +380,21 @@ const inactiveTabStyle = {
   border: "1px solid #7e7e7e",
   color: "#ffffff60",
   cursor: "pointer",
+};
+
+const avatarUploadStyle = {
+  position: "absolute" as const,
+  right: 18,
+  top: 18,
+  width: 38,
+  height: 38,
+  borderRadius: "50%",
+  background: "rgba(0,0,0,0.58)",
+  color: "#fff",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  border: "1px solid rgba(255,255,255,0.28)",
+  cursor: "pointer",
+  zIndex: 3,
 };

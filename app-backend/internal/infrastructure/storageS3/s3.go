@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -46,13 +48,20 @@ func New() (*S3Storage, error) {
 }
 
 func (s *S3Storage) UploadAvatar(ctx context.Context, userID string, data []byte) (string, error) {
-	key := fmt.Sprintf("avatars/%s.jpg", userID)
+	contentType := http.DetectContentType(data)
+	ext := "jpg"
+	if strings.Contains(contentType, "png") {
+		ext = "png"
+	} else if strings.Contains(contentType, "webp") {
+		ext = "webp"
+	}
+	key := fmt.Sprintf("avatars/%s.%s", userID, ext)
 
 	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      &s.bucket,
 		Key:         &key,
 		Body:        bytes.NewReader(data),
-		ContentType: aws.String("image/jpeg"),
+		ContentType: aws.String(contentType),
 	})
 	if err != nil {
 		return "", err

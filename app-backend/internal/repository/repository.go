@@ -18,6 +18,7 @@ type UserRepository interface {
 	CountBanned(ctx context.Context) (int64, error)
 	ListRecent(ctx context.Context, limit int) ([]domain.User, error)
 	ListForRating(ctx context.Context) ([]domain.User, error)
+	ListForRatingByMonth(ctx context.Context, month time.Time) ([]domain.User, error)
 }
 
 type GameRepository interface {

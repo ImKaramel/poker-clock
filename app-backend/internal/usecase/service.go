@@ -243,10 +243,12 @@ func (s *Service) CompleteGame(ctx context.Context, gameID int64, parts []Comple
 		return nil, err
 	}
 	completedByUser := make(map[string]CompleteParticipantInput)
+	liveByUser := make(map[string]domain.Participant)
 	for _, p := range liveParts {
 		if !p.Arrived {
 			continue
 		}
+		liveByUser[p.UserID] = p
 		completedByUser[p.UserID] = CompleteParticipantInput{
 			UserID:  p.UserID,
 			Entries: p.Entries,
@@ -333,6 +335,10 @@ func (s *Service) CompleteGame(ctx context.Context, gameID int64, parts []Comple
 			Addons:              p.Addons,
 			TotalSpent:          spent,
 			PaymentMethod:       p.PaymentMethod,
+		}
+		if live, ok := liveByUser[p.UserID]; ok {
+			tp.Position = live.Position
+			tp.FinalPoints = live.FinalPoints
 		}
 		if err := s.Tournaments.AddTournamentParticipant(ctx, tp); err != nil {
 			return nil, err

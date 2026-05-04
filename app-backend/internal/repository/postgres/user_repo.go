@@ -172,3 +172,26 @@ func (r *UserRepo) ListForRating(ctx context.Context) ([]domain.User, error) {
 	defer rows.Close()
 	return scanUserRows(rows)
 }
+
+func (r *UserRepo) ListForRatingByMonth(ctx context.Context, month time.Time) ([]domain.User, error) {
+	start := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, time.UTC)
+	end := start.AddDate(0, 1, 0)
+	rows, err := r.pool.Query(ctx, `
+		SELECT u.user_id, u.password, u.last_login, u.is_superuser, u.username, u.nick_name, u.first_name, u.last_name,
+			u.phone_number, u.email, u.date_of_birth, COALESCE(SUM(tp.final_points), 0)::int AS points,
+			COUNT(tp.id)::int AS total_games_played, u.is_admin, u.is_staff, u.is_active, u.is_banned,
+			u.created_at, u.updated_at, u.photo_url
+		FROM users u
+		INNER JOIN tournament_participants tp ON tp.user_id = u.user_id
+		INNER JOIN tournament_history th ON th.id = tp.tournament_history_id
+		WHERE u.is_banned = FALSE
+			AND th.date >= $1::date
+			AND th.date < $2::date
+		GROUP BY u.user_id
+		ORDER BY points DESC, total_games_played DESC, u.created_at`, start, end)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanUserRows(rows)
+}

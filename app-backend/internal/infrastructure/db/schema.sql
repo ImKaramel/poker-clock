@@ -115,6 +115,10 @@ CREATE TABLE IF NOT EXISTS tournament_participants (
     total_spent INT NOT NULL DEFAULT 0,
     payment_method VARCHAR(20)
 );
+ALTER TABLE tournament_participants
+    ADD COLUMN IF NOT EXISTS position INT;
+ALTER TABLE tournament_participants
+    ADD COLUMN IF NOT EXISTS final_points INT NOT NULL DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS idx_participants_game ON participants(game_id);
 CREATE INDEX IF NOT EXISTS idx_participants_user ON participants(user_id);

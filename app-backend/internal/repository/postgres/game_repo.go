@@ -96,7 +96,11 @@ func (r *GameRepo) ListActive(ctx context.Context) ([]domain.Game, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT game_id, name, date, time, description, buyin, reentry_buyin, location, photo, is_active,
 			completed, completed_at, created_at, base_points, points_per_extra_player, min_players_for_extra_points
-		FROM games WHERE is_active = TRUE ORDER BY date, time`)
+		FROM games
+		WHERE is_active = TRUE
+			AND completed = FALSE
+			AND date >= CURRENT_DATE
+		ORDER BY date, time`)
 	if err != nil {
 		return nil, err
 	}

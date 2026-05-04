@@ -129,17 +129,17 @@ func (r *TournamentRepo) DeleteHistory(ctx context.Context, id int64) error {
 func (r *TournamentRepo) AddTournamentParticipant(ctx context.Context, p *domain.TournamentParticipant) error {
 	return r.pool.QueryRow(ctx, `
 		INSERT INTO tournament_participants (tournament_history_id, user_id, username, first_name, last_name,
-			entries, rebuys, addons, total_spent, payment_method)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+			entries, rebuys, addons, total_spent, payment_method, position, final_points)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
 		p.TournamentHistoryID, p.UserID, p.Username, p.FirstName, p.LastName,
-		p.Entries, p.Rebuys, p.Addons, p.TotalSpent, p.PaymentMethod,
+		p.Entries, p.Rebuys, p.Addons, p.TotalSpent, p.PaymentMethod, p.Position, p.FinalPoints,
 	).Scan(&p.ID)
 }
 
 func (r *TournamentRepo) ListTournamentParticipants(ctx context.Context, historyID int64) ([]domain.TournamentParticipant, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, tournament_history_id, user_id, username, first_name, last_name,
-			entries, rebuys, addons, total_spent, payment_method
+			entries, rebuys, addons, total_spent, payment_method, position, final_points
 		FROM tournament_participants WHERE tournament_history_id = $1`, historyID)
 	if err != nil {
 		return nil, err
@@ -149,11 +149,13 @@ func (r *TournamentRepo) ListTournamentParticipants(ctx context.Context, history
 	for rows.Next() {
 		var p domain.TournamentParticipant
 		var pm *string
+		var pos *int
 		err := rows.Scan(
 			&p.ID, &p.TournamentHistoryID, &p.UserID, &p.Username, &p.FirstName, &p.LastName,
-			&p.Entries, &p.Rebuys, &p.Addons, &p.TotalSpent, &pm,
+			&p.Entries, &p.Rebuys, &p.Addons, &p.TotalSpent, &pm, &pos, &p.FinalPoints,
 		)
 		p.PaymentMethod = pm
+		p.Position = pos
 		if err != nil {
 			return nil, err
 		}

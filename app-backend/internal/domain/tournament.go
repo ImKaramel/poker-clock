@@ -29,4 +29,6 @@ type TournamentParticipant struct {
 	Addons              int
 	TotalSpent          int
 	PaymentMethod       *string
+	Position            *int
+	FinalPoints         int
 }

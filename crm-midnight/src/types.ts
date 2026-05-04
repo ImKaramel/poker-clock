@@ -33,6 +33,37 @@ export interface GameType {
   time: string
 }
 
+export interface TournamentHistoryParticipant {
+  id: number,
+  user_id: string,
+  username: string,
+  first_name: string,
+  last_name: string,
+  entries: number,
+  rebuys: number,
+  addons: number,
+  total_spent: number,
+  payment_method?: string | null,
+  payment_method_display?: string,
+  position?: number | null,
+  final_points?: number,
+}
+
+export interface TournamentHistoryType {
+  id: number,
+  game: number,
+  date: string,
+  time?: string | null,
+  tournament_name: string,
+  location: string,
+  buyin: number,
+  reentry_buyin?: number | null,
+  total_revenue: number,
+  participants_count: number,
+  completed_at: string,
+  participants: TournamentHistoryParticipant[],
+}
+
 export interface RatingType {
   games_played: number,
   points: number,

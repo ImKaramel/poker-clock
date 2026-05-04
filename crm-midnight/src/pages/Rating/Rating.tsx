@@ -14,8 +14,21 @@ import RatingTable from "./RatingTable";
 import { RatingType } from "../../types";
 import { ratingAPI } from "../../utils/api";
 
+const monthNames = [
+  "Январская", "Февральская", "Мартовская", "Апрельская", "Майская", "Июньская",
+  "Июльская", "Августовская", "Сентябрьская", "Октябрьская", "Ноябрьская", "Декабрьская",
+];
+
+const currentSeriesName = () => `${monthNames[new Date().getMonth()]} серия`;
+const monthParamBySeries = (seriesName: string) => {
+  const monthIndex = monthNames.findIndex((month) => seriesName.startsWith(month));
+  const date = new Date();
+  const selectedMonth = monthIndex >= 0 ? monthIndex : date.getMonth();
+  return `${date.getFullYear()}-${String(selectedMonth + 1).padStart(2, "0")}`;
+};
+
 export default function Rating() {
-  const [series, setSeries] = React.useState("Апрельская серия");
+  const [series, setSeries] = React.useState(currentSeriesName());
    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState<RatingType[]>([]);
@@ -23,10 +36,17 @@ export default function Rating() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const timer = window.setInterval(() => {
+      setSeries(currentSeriesName());
+    }, 60 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     const getRating = async () => {
       try {
         setLoading(true);
-        const response = await ratingAPI.getRating();
+        const response = await ratingAPI.getRating(monthParamBySeries(series));
         setRating(response.data);
         setError(null);
       } catch (err: any) {
@@ -38,7 +58,7 @@ export default function Rating() {
     };
 
     getRating();
-  }, []);
+  }, [series]);
 
   const handleChange = (event: any) => {
     setSeries(event.target.value);
@@ -76,9 +96,14 @@ export default function Rating() {
               displayEmpty
               inputProps={{ "aria-label": "Выбор серии" }}
             >
-              {/* <MenuItem value="Мартовская серия">Мартовская серия</MenuItem> */}
-              <MenuItem value="Апрельская серия">Апрельская серия</MenuItem>
-              {/* <MenuItem value="Майская серия">Майская серия</MenuItem> */}
+              {monthNames.map((month) => {
+                const value = `${month} серия`;
+                return (
+                  <MenuItem key={value} value={value}>
+                    {value}
+                  </MenuItem>
+                );
+              })}
             </StyledSelect>
           </RatingPeriodContainer>
         </RatingHeaderWrapper>

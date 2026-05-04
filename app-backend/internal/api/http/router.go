@@ -87,18 +87,6 @@ func Mount(
 		tick.DELETE("/:id", h.DeleteTicket)
 	}
 
-	th := api.Group("/tournament-history")
-	th.Use(jwtMW, adm)
-	{
-		th.GET("", h.ListTournamentHistory)
-		th.POST("", h.CreateTournamentHistory)
-		th.GET("/:id/participants", h.TournamentParticipants)
-		th.GET("/:id", h.GetTournamentHistory)
-		th.PATCH("/:id", h.UpdateTournamentHistory)
-		th.PUT("/:id", h.UpdateTournamentHistory)
-		th.DELETE("/:id", h.DeleteTournamentHistory)
-	}
-
 	authed := api.Group("")
 	authed.Use(jwtMW)
 	{
@@ -106,6 +94,20 @@ func Mount(
 		authed.GET("/rating", h.Rating)
 		authed.GET("/profile", h.ProfileGet)
 		authed.PATCH("/profile", h.ProfilePatch)
+		authed.PATCH("/profile/", h.ProfilePatch)
+		authed.POST("/profile/avatar", h.ProfileAvatarUpload)
+		authed.GET("/tournament-history", h.ListTournamentHistory)
+		authed.GET("/tournament-history/:id/participants", h.TournamentParticipants)
+		authed.GET("/tournament-history/:id", h.GetTournamentHistory)
 		authed.GET("/admin/dashboard", h.AdminDashboard)
+	}
+
+	thAdm := api.Group("/tournament-history")
+	thAdm.Use(jwtMW, adm)
+	{
+		thAdm.POST("", h.CreateTournamentHistory)
+		thAdm.PATCH("/:id", h.UpdateTournamentHistory)
+		thAdm.PUT("/:id", h.UpdateTournamentHistory)
+		thAdm.DELETE("/:id", h.DeleteTournamentHistory)
 	}
 }

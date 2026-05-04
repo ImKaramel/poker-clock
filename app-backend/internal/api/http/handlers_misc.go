@@ -193,7 +193,13 @@ func (h *Handlers) ListTournamentHistory(c *gin.Context) {
 	}
 	out := make([]map[string]any, 0, len(list))
 	for i := range list {
-		out = append(out, tournamentHistoryListMap(&list[i]))
+		parts, err := h.Repo.Tournaments.ListTournamentParticipants(c.Request.Context(), list[i].ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		list[i].Participants = parts
+		out = append(out, tournamentHistoryToMap(&list[i]))
 	}
 	c.JSON(http.StatusOK, out)
 }
@@ -352,6 +358,8 @@ func (h *Handlers) TournamentParticipants(c *gin.Context) {
 			"total_spent":            p.TotalSpent,
 			"payment_method":         p.PaymentMethod,
 			"payment_method_display": paymentMethodDisplay(p.PaymentMethod),
+			"position":               p.Position,
+			"final_points":           p.FinalPoints,
 		})
 	}
 	c.JSON(http.StatusOK, out)

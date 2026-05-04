@@ -133,7 +133,10 @@ func (r *ParticipantRepo) ListUpcomingForUser(ctx context.Context, userID string
 		SELECT p.id, p.user_id, p.game_id, p.entries, p.rebuys, p.addons, p.final_points, p.position, p.arrived, p.is_out, p.joined_at
 		FROM participants p
 		INNER JOIN games g ON g.game_id = p.game_id
-		WHERE p.user_id = $1 AND g.date >= $2::date
+		WHERE p.user_id = $1
+			AND g.date >= $2::date
+			AND g.is_active = TRUE
+			AND g.completed = FALSE
 		ORDER BY g.date, g.time
 		LIMIT 5`, userID, fromDate)
 	if err != nil {
