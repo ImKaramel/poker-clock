@@ -86,6 +86,29 @@ func (r *TournamentRepo) ListHistory(ctx context.Context) ([]domain.TournamentHi
 	return out, rows.Err()
 }
 
+func (r *TournamentRepo) ListHistoryByUser(ctx context.Context, userID string) ([]domain.TournamentHistory, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT h.id, h.game_id, h.date, h.time, h.tournament_name, h.location, h.buyin, h.reentry_buyin,
+			h.total_revenue, h.participants_count, h.completed_at
+		FROM tournament_history h
+		INNER JOIN tournament_participants tp ON tp.tournament_history_id = h.id
+		WHERE tp.user_id = $1
+		ORDER BY h.date DESC, h.time DESC NULLS LAST`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.TournamentHistory
+	for rows.Next() {
+		h, err := scanHistory(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *h)
+	}
+	return out, rows.Err()
+}
+
 func (r *TournamentRepo) UpdateHistory(ctx context.Context, h *domain.TournamentHistory) error {
 	_, err := r.pool.Exec(ctx, `
 		UPDATE tournament_history SET

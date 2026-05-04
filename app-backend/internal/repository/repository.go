@@ -62,6 +62,7 @@ type TournamentRepository interface {
 	CreateHistory(ctx context.Context, h *domain.TournamentHistory) error
 	GetHistoryByID(ctx context.Context, id int64) (*domain.TournamentHistory, error)
 	ListHistory(ctx context.Context) ([]domain.TournamentHistory, error)
+	ListHistoryByUser(ctx context.Context, userID string) ([]domain.TournamentHistory, error)
 	UpdateHistory(ctx context.Context, h *domain.TournamentHistory) error
 	DeleteHistory(ctx context.Context, id int64) error
 	AddTournamentParticipant(ctx context.Context, p *domain.TournamentParticipant) error

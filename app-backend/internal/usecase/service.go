@@ -237,6 +237,48 @@ func (s *Service) CompleteGame(ctx context.Context, gameID int64, parts []Comple
 	if g == nil {
 		return nil, ErrNotFound
 	}
+
+	liveParts, err := s.Participants.ListByGame(ctx, gameID)
+	if err != nil {
+		return nil, err
+	}
+	completedByUser := make(map[string]CompleteParticipantInput)
+	for _, p := range liveParts {
+		if !p.Arrived {
+			continue
+		}
+		completedByUser[p.UserID] = CompleteParticipantInput{
+			UserID:  p.UserID,
+			Entries: p.Entries,
+			Rebuys:  p.Rebuys,
+			Addons:  p.Addons,
+		}
+	}
+	for _, p := range parts {
+		existing, ok := completedByUser[p.UserID]
+		if !ok {
+			continue
+		}
+		if p.Entries > 0 {
+			existing.Entries = p.Entries
+		}
+		if p.Rebuys > 0 {
+			existing.Rebuys = p.Rebuys
+		}
+		if p.Addons > 0 {
+			existing.Addons = p.Addons
+		}
+		existing.PaymentMethod = p.PaymentMethod
+		completedByUser[p.UserID] = existing
+	}
+	completedParts := make([]CompleteParticipantInput, 0, len(completedByUser))
+	for _, p := range completedByUser {
+		completedParts = append(completedParts, p)
+	}
+	sort.Slice(completedParts, func(i, j int) bool {
+		return completedParts[i].UserID < completedParts[j].UserID
+	})
+
 	re := reentryPrice(g)
 	buyinI := int(math.Round(g.Buyin))
 	reI := int(math.Round(re))
@@ -259,14 +301,14 @@ func (s *Service) CompleteGame(ctx context.Context, gameID int64, parts []Comple
 		Location:          g.Location,
 		Buyin:             buyinI,
 		ReentryBuyin:      rePtr,
-		ParticipantsCount: len(parts),
+		ParticipantsCount: len(completedParts),
 	}
 	if err := s.Tournaments.CreateHistory(ctx, h); err != nil {
 		return nil, err
 	}
 
 	totalRev := 0
-	for _, p := range parts {
+	for _, p := range completedParts {
 		u, err := s.Users.GetByID(ctx, p.UserID)
 		if err != nil {
 			return nil, err

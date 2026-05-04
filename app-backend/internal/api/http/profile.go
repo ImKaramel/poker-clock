@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pridecrm/app-backend/internal/domain"
 	infraauth "github.com/pridecrm/app-backend/internal/infrastructure/auth"
 )
 
@@ -56,10 +57,45 @@ func (h *Handlers) ProfileGet(c *gin.Context) {
 		details, _ := h.gameParticipantDetails(c.Request.Context(), g.GameID)
 		games = append(games, gameToMap(g, n, details))
 	}
+	history, err := h.Repo.Tournaments.ListHistoryByUser(c.Request.Context(), uid)
+	if err != nil {
+		h.Log.Error("profile past games", slog.Any("err", err))
+		history = nil
+	}
+	pastGames := make([]map[string]any, 0, len(history))
+	for i := range history {
+		pastGames = append(pastGames, tournamentHistoryGameToMap(&history[i]))
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"user":           userToMap(u),
 		"upcoming_games": games,
+		"past_games":     pastGames,
 	})
+}
+
+func tournamentHistoryGameToMap(h *domain.TournamentHistory) map[string]any {
+	m := map[string]any{
+		"history_id":           h.ID,
+		"game_id":              h.GameID,
+		"name":                 h.TournamentName,
+		"date":                 h.Date.Format("2006-01-02"),
+		"description":          h.TournamentName,
+		"location":             h.Location,
+		"buyin":                h.Buyin,
+		"reentry_buyin":        h.ReentryBuyin,
+		"participants_count":   h.ParticipantsCount,
+		"is_active":            false,
+		"completed_at":         h.CompletedAt.UTC().Format(time.RFC3339),
+		"total_revenue":        h.TotalRevenue,
+		"participants_details": []map[string]any{},
+		"photo":                nil,
+	}
+	if h.Time != nil {
+		m["time"] = h.Time.Format("15:04:05")
+	} else {
+		m["time"] = nil
+	}
+	return m
 }
 
 func (h *Handlers) ProfilePatch(c *gin.Context) {

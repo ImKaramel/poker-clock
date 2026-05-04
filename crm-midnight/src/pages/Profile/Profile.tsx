@@ -50,6 +50,7 @@ export default function Profile() {
   const [edited, setEdited] = useState<boolean>(false);
   const [isSavingNickname, setIsSavingNickname] = useState<boolean>(false);
   const [nick_name, setNick_name] = useState<string>("");
+  const [historyTab, setHistoryTab] = useState<"active" | "past">("active");
 
   useEffect(() => {
     const getProfile = async () => {
@@ -167,6 +168,9 @@ export default function Profile() {
     return Math.min(width, 100);
   };
 
+  const historyGames =
+    historyTab === "active" ? profile?.upcoming_games || [] : profile?.past_games || [];
+
   return (
     <ProfileContainer>
       <ProfileInfoContainer>
@@ -269,12 +273,22 @@ export default function Profile() {
         <GameHistoryWrapper>
           <GameHistoryTitle>История игр</GameHistoryTitle>
           <TabContainer style={{ position: "inherit" }}>
-            <CurrentTab>Активные</CurrentTab>
-            <PastTab>Прошедшие</PastTab>
+            <CurrentTab
+              onClick={() => setHistoryTab("active")}
+              style={historyTab === "active" ? activeTabStyle : inactiveTabStyle}
+            >
+              Активные
+            </CurrentTab>
+            <PastTab
+              onClick={() => setHistoryTab("past")}
+              style={historyTab === "past" ? activeTabStyle : inactiveTabStyle}
+            >
+              Прошедшие
+            </PastTab>
           </TabContainer>
         </GameHistoryWrapper>
       </GameHistoryContainer>
-      {profile?.upcoming_games.map((item, index) => (
+      {historyGames.map((item, index) => (
         <TournamentCardContainer key={index}>
           <InfoCardContainer>
             <TournamentName>{item.name}</TournamentName>
@@ -311,3 +325,17 @@ export default function Profile() {
     </ProfileContainer>
   );
 }
+
+const activeTabStyle = {
+  backgroundColor: "#fff",
+  border: "1px solid #fff",
+  color: "#151a22",
+  cursor: "pointer",
+};
+
+const inactiveTabStyle = {
+  backgroundColor: "transparent",
+  border: "1px solid #7e7e7e",
+  color: "#ffffff60",
+  cursor: "pointer",
+};

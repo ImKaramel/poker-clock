@@ -1,7 +1,6 @@
 export interface ProfileType {
-  upcoming_games: [
-    GameType
-  ],
+  upcoming_games: GameType[],
+  past_games: GameType[],
   user: {
     created_at: string,
     first_name: string,
