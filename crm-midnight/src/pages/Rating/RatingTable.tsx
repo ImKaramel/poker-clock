@@ -18,20 +18,31 @@ export default function RatingTable({ rows, currentUserId }: RatingTableProps) {
       <Paper
         sx={{
           width: "100%",
-          maxWidth: 600,
           borderRadius: "12px",
           boxShadow: 'none',
           backgroundColor: "#151A22",
           height: "auto",
         }}
       >
-        <TableContainer>
-          <Table aria-label="leaderboard table" sx={{borderCollapse: 'separate', borderSpacing: '0 4px'}}>
+        <TableContainer sx={{ overflowX: "hidden" }}>
+          <Table
+            aria-label="leaderboard table"
+            sx={{
+              width: "100%",
+              tableLayout: "fixed",
+              borderCollapse: "separate",
+              borderSpacing: "0 4px",
+            }}
+          >
             <TableHead>
               <TableRow>
                 <StyledTableCell>НИКНЕЙМ</StyledTableCell>
-                <StyledTableCell align="right">НОКАУТЫ</StyledTableCell>
-                <StyledTableCell align="right">РЕЙТИНГ</StyledTableCell>
+                <StyledTableCell align="right" sx={{ width: 54, whiteSpace: "nowrap" }}>
+                  НОКАУТЫ
+                </StyledTableCell>
+                <StyledTableCell align="right" sx={{ width: 82, whiteSpace: "nowrap" }}>
+                  РЕЙТИНГ
+                </StyledTableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -59,8 +70,8 @@ export default function RatingTable({ rows, currentUserId }: RatingTableProps) {
                     }),
                   }}
                 >
-                  <TableCell component="th" scope="row" sx={{ padding: 0 }}>
-                    <Stack direction="row" alignItems="center" spacing={2}>
+                  <TableCell component="th" scope="row" sx={{ padding: 0, minWidth: 0 }}>
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
                       <Box
                         sx={{
                           width: 20,
@@ -95,20 +106,31 @@ export default function RatingTable({ rows, currentUserId }: RatingTableProps) {
                       <Avatar
                         src={row.user.photo_url}
                         alt="avatar"
-                        sx={{ width: 22, height: 22 }}
+                        sx={{ width: 22, height: 22, flexShrink: 0 }}
                       />
-                      <StyledTypography variant="body1" sx={{ color: "#fff!important", fontSize: '15px' }}>
+                      <StyledTypography
+                        variant="body1"
+                        sx={{
+                          color: "#fff!important",
+                          fontSize: "15px",
+                          flex: 1,
+                          minWidth: 0,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {getDisplayName(row)}
                       </StyledTypography>
                     </Stack>
                   </TableCell>
-                  <TableCell align="right" padding="none">
+                  <TableCell align="right" padding="none" sx={{ width: 54, whiteSpace: "nowrap" }}>
                     <StyledTypography variant="body1" sx={{ color: "#fff!important", fontSize: '15px' }}>
                       {/* {row.knockouts} - добавьте поле knockouts в тип RatingType если нужно */}
                       —
                     </StyledTypography>
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell align="right" sx={{ width: 82, whiteSpace: "nowrap", pr: 0 }}>
                     <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={0.5}>
                       <StyledTypography variant="body1" sx={{ color: "#fff!important", fontSize: '15px' }}>
                         {row.points}

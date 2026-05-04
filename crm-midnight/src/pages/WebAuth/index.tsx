@@ -14,7 +14,6 @@ const WebAuth: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const locationState = location.state as { authError?: string } | null;
-  const [hasToken, setHasToken] = useState(false);
   const [mode, setMode] = useState<Mode>("login");
   const [telegramUsername, setTelegramUsername] = useState("");
   const [nickname, setNickname] = useState("");
@@ -22,7 +21,6 @@ const WebAuth: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState(locationState?.authError || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showFallback, setShowFallback] = useState(true);
 
   const username = useMemo(() => normalizeUsername(telegramUsername), [telegramUsername]);
 
@@ -39,44 +37,14 @@ const WebAuth: React.FC = () => {
 
     if (token) {
       localStorage.setItem("auth_token", token);
-      setHasToken(true);
       navigate("/", { replace: true });
       return;
     }
 
     if (authError) {
       setError("Telegram не смог авторизовать вход. Войдите резервным способом.");
-      setShowFallback(true);
     }
   }, [location, navigate]);
-
-  useEffect(() => {
-    if (hasToken) return;
-
-    const container = document.getElementById("tg-login");
-    if (!container) return;
-
-    container.innerHTML = "";
-
-    const existingScripts = document.querySelectorAll('script[src*="telegram-widget.js"]');
-    existingScripts.forEach(script => script.remove());
-
-    const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.async = true;
-    script.setAttribute("data-telegram-login", "Midnight_poker_bot");
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-auth-url", "https://api.midnight-club-app.ru/api/auth/telegram/callback");
-    script.setAttribute("data-request-access", "write");
-    script.setAttribute("data-radius", "10");
-
-    script.onerror = () => {
-      setError("Не удалось загрузить вход через Telegram. Войдите резервным способом.");
-      setShowFallback(true);
-    };
-
-    container.appendChild(script);
-  }, [hasToken]);
 
   const validateForm = () => {
     if (!usernamePattern.test(username)) {
@@ -158,112 +126,92 @@ const WebAuth: React.FC = () => {
         <section style={{
           padding: 18,
           borderRadius: 8,
-          backgroundColor: "rgba(7, 9, 12, 0.76)",
-          border: "1px solid rgba(255,255,255,0.12)",
+          backgroundColor: "rgba(7, 9, 12, 0.82)",
+          border: "1px solid rgba(255,255,255,0.14)",
           backdropFilter: "blur(6px)",
         }}>
-          <div id="tg-login" style={{
-            display: "flex",
-            justifyContent: "center",
-            minHeight: 64,
-            alignItems: "center",
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 8,
+            marginBottom: 16,
           }}>
-            <div>Загрузка кнопки входа...</div>
+            <button type="button" onClick={() => switchMode("login")} style={tabStyle(mode === "login")}>
+              Вход
+            </button>
+            <button type="button" onClick={() => switchMode("register")} style={tabStyle(mode === "register")}>
+              Регистрация
+            </button>
           </div>
 
-        </section>
+          <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <label style={labelStyle}>
+              Telegram username
+              <input
+                value={telegramUsername}
+                onChange={(e) => setTelegramUsername(e.target.value)}
+                placeholder="username"
+                autoCapitalize="none"
+                autoComplete="username"
+                style={inputStyle}
+              />
+            </label>
 
-        {showFallback && (
-          <section style={{
-            padding: 18,
-            borderRadius: 8,
-            backgroundColor: "rgba(7, 9, 12, 0.82)",
-            border: "1px solid rgba(255,255,255,0.14)",
-            backdropFilter: "blur(6px)",
-          }}>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 8,
-              marginBottom: 16,
-            }}>
-              <button type="button" onClick={() => switchMode("login")} style={tabStyle(mode === "login")}>
-                Вход
-              </button>
-              <button type="button" onClick={() => switchMode("register")} style={tabStyle(mode === "register")}>
-                Регистрация
-              </button>
-            </div>
-
-            <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {mode === "register" && (
               <label style={labelStyle}>
-                Telegram username
+                Nickname
                 <input
-                  value={telegramUsername}
-                  onChange={(e) => setTelegramUsername(e.target.value)}
-                  placeholder="username"
-                  autoCapitalize="none"
-                  autoComplete="username"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="Ваш ник"
+                  autoComplete="nickname"
                   style={inputStyle}
                 />
               </label>
+            )}
 
-              {mode === "register" && (
-                <label style={labelStyle}>
-                  Nickname
-                  <input
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                    placeholder="Ваш ник"
-                    autoComplete="nickname"
-                    style={inputStyle}
-                  />
-                </label>
-              )}
+            <label style={labelStyle}>
+              Пароль
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                style={inputStyle}
+              />
+            </label>
 
+            {mode === "register" && (
               <label style={labelStyle}>
-                Пароль
+                Повторите пароль
                 <input
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   type="password"
-                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  autoComplete="new-password"
                   style={inputStyle}
                 />
               </label>
+            )}
 
-              {mode === "register" && (
-                <label style={labelStyle}>
-                  Повторите пароль
-                  <input
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    type="password"
-                    autoComplete="new-password"
-                    style={inputStyle}
-                  />
-                </label>
-              )}
+            {error && (
+              <div style={{
+                color: "#ffb4b4",
+                background: "rgba(128, 0, 0, 0.22)",
+                border: "1px solid rgba(255, 130, 130, 0.24)",
+                borderRadius: 8,
+                padding: "10px 12px",
+                fontSize: 14,
+              }}>
+                {error}
+              </div>
+            )}
 
-              {error && (
-                <div style={{
-                  color: "#ffb4b4",
-                  background: "rgba(128, 0, 0, 0.22)",
-                  border: "1px solid rgba(255, 130, 130, 0.24)",
-                  borderRadius: 8,
-                  padding: "10px 12px",
-                  fontSize: 14,
-                }}>
-                  {error}
-                </div>
-              )}
-
-              <button type="submit" disabled={isSubmitting} style={primaryButtonStyle}>
-                {isSubmitting ? "Проверка..." : mode === "login" ? "Войти" : "Зарегистрироваться"}
-              </button>
-            </form>
-          </section>
-        )}
+            <button type="submit" disabled={isSubmitting} style={primaryButtonStyle}>
+              {isSubmitting ? "Проверка..." : mode === "login" ? "Войти" : "Зарегистрироваться"}
+            </button>
+          </form>
+        </section>
 
         <a
           href="https://t.me/Midnight_poker_bot"
