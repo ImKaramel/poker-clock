@@ -127,21 +127,23 @@ export default function Schedule() {
 
       {tab === "past" &&
         recentHistory.map((item) => (
-          <TournamentCardContainer key={item.id} style={{ height: "auto", minHeight: 92 }}>
-            <InfoCardContainer style={{ width: "100%", height: "auto", paddingRight: 8 }}>
-              <TournamentName>{item.tournament_name}</TournamentName>
-              <TimeContainer>
-                <div style={iconBoxStyle}>
-                  <Calendar />
-                </div>
-                <TimeTitle>{formatDate(item.date)}</TimeTitle>
-              </TimeContainer>
-              <TimeContainer style={{ gridColumn: "2/3" }}>
-                <div style={iconBoxStyle}>
-                  <Time />
-                </div>
-                <TimeTitle>{formatTime(item.time || undefined)}</TimeTitle>
-              </TimeContainer>
+          <TournamentCardContainer key={item.id} style={pastCardStyle}>
+            <div style={pastInfoStyle}>
+              <TournamentName style={pastNameStyle}>{item.tournament_name}</TournamentName>
+              <div style={pastMetaRowStyle}>
+                <TimeContainer style={pastTimeContainerStyle}>
+                  <div style={iconBoxStyle}>
+                    <Calendar />
+                  </div>
+                  <TimeTitle>{formatDate(item.date)}</TimeTitle>
+                </TimeContainer>
+                <TimeContainer style={pastTimeContainerStyle}>
+                  <div style={iconBoxStyle}>
+                    <Time />
+                  </div>
+                  <TimeTitle>{formatTime(item.time || undefined)}</TimeTitle>
+                </TimeContainer>
+              </div>
               <div style={resultStyle}>
                 {item.participants_count} игроков
                 {item.participants?.length
@@ -153,8 +155,8 @@ export default function Schedule() {
                       .join(", ")}`
                   : ""}
               </div>
-            </InfoCardContainer>
-            <img src={tournament_image} alt="img" />
+            </div>
+            <img src={tournament_image} alt="img" style={pastImageStyle} />
           </TournamentCardContainer>
         ))}
       {!!error && <div style={{ color: "#ff8585", padding: 16 }}>{String(error)}</div>}
@@ -184,8 +186,60 @@ const inactiveTabStyle = {
 };
 
 const resultStyle = {
-  gridColumn: "1 / 3",
   color: "#ffffff99",
   fontSize: 12,
   lineHeight: "16px",
+  whiteSpace: "nowrap" as const,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  maxWidth: "100%",
+};
+
+const pastCardStyle = {
+  minHeight: 96,
+  height: "auto",
+  alignItems: "stretch",
+  justifyContent: "space-between",
+  overflow: "hidden",
+  boxSizing: "border-box" as const,
+};
+
+const pastInfoStyle = {
+  minWidth: 0,
+  flex: "1 1 auto",
+  padding: "18px 12px 16px 20px",
+  display: "flex",
+  flexDirection: "column" as const,
+  gap: 8,
+};
+
+const pastNameStyle = {
+  height: "auto",
+  minHeight: 0,
+  lineHeight: "20px",
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical" as const,
+  overflow: "hidden",
+};
+
+const pastMetaRowStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 14,
+  minWidth: 0,
+};
+
+const pastTimeContainerStyle = {
+  justifyContent: "flex-start",
+  width: "auto",
+  minWidth: 0,
+};
+
+const pastImageStyle = {
+  width: 112,
+  minWidth: 112,
+  height: "100%",
+  objectFit: "cover" as const,
+  opacity: 0.72,
 };
