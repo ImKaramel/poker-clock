@@ -104,17 +104,32 @@ func main() {
 	engine.Use(gin.Recovery())
 	engine.Use(httpdelivery.RequestLogger(log))
 
-	engine.Use(cors.New(cors.Config{
+	allowOrigins := []string{
+		"https://poker-clock-nine.vercel.app",
+		"https://api.midnight-club-app.ru",
+		"https://admin-panel-midnight.vercel.app",
+		"http://localhost:3000",
+		"http://localhost:8080",
+		"https://midnight-club-app.ru",
+		"https://www.midnight-club-app.ru",
+		"https://midnight-club.ru",
+		"https://www.midnight-club.ru",
+	}
+	if cfg.FrontendURL != "" {
+		exists := false
+		for _, origin := range allowOrigins {
+			if origin == cfg.FrontendURL {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			allowOrigins = append(allowOrigins, cfg.FrontendURL)
+		}
+	}
 
-		AllowOrigins: []string{
-			"https://poker-clock-nine.vercel.app",
-			"https://api.midnight-club-app.ru",
-			"https://admin-panel-midnight.vercel.app",
-			"http://localhost:3000",
-			"http://localhost:8080",
-			"https://midnight-club-app.ru",
-			"https://www.midnight-club-app.ru",
-		},
+	engine.Use(cors.New(cors.Config{
+		AllowOrigins: allowOrigins,
 		AllowMethods: []string{
 			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD",
 		},
