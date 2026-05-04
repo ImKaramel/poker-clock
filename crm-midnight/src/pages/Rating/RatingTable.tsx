@@ -9,6 +9,8 @@ interface RatingTableProps {
   currentUserId?: string;
 }
 
+const getDisplayName = (row: RatingType) =>
+  row.user.nick_name || row.user.first_name || row.user.username || row.user.user_id;
 
 export default function RatingTable({ rows, currentUserId }: RatingTableProps) {
   return (
@@ -96,7 +98,7 @@ export default function RatingTable({ rows, currentUserId }: RatingTableProps) {
                         sx={{ width: 22, height: 22 }}
                       />
                       <StyledTypography variant="body1" sx={{ color: "#fff!important", fontSize: '15px' }}>
-                        {row.user.nick_name || row.user.first_name}
+                        {getDisplayName(row)}
                       </StyledTypography>
                     </Stack>
                   </TableCell>
