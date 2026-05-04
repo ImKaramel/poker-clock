@@ -27,6 +27,13 @@ func (h *Handlers) Rating(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if len(users) == 0 {
+		users, err = h.Repo.Users.ListForRating(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
 	out := make([]map[string]any, 0, len(users))
 	for rank, u := range users {
 		out = append(out, map[string]any{

@@ -39,8 +39,6 @@ import { profileAPI, ratingAPI } from "../../utils/api";
 import { ProfileType, RatingType } from "../../types";
 import { ReactComponent as EditButton } from "../../assets/edit.svg";
 
-const RatingEpxl = 500;
-
 export default function Profile() {
   const [error, setError] = useState("");
   const [profile, setProfile] = useState<ProfileType>();
@@ -194,9 +192,16 @@ export default function Profile() {
     return `${day} ${month}`;
   };
 
+  const currentUserInRating = rating.find(
+    (item) => item.user.user_id === profile?.user?.user_id
+  );
+  const currentRatingPoints = currentUserInRating?.points ?? profile?.user?.points ?? 0;
+  const qualificationPoints =
+    rating[26]?.points ?? rating[rating.length - 1]?.points ?? 0;
+
   const calcWidth = () => {
-    if (!profile?.user) return 0;
-    const width = (profile.user.points / RatingEpxl) * 100;
+    if (qualificationPoints <= 0) return 0;
+    const width = (currentRatingPoints / qualificationPoints) * 100;
     return Math.min(width, 100);
   };
 
@@ -295,11 +300,11 @@ export default function Profile() {
               }}
             >
               <RatingSubtitle>
-                Рейтинг {profile?.user?.points || 0}
+                Рейтинг {currentRatingPoints}
                 <FlashOnIcon sx={{ color: "gold", fontSize: "1rem" }} />
               </RatingSubtitle>
               <RatingSubtitle>
-                {RatingEpxl}{" "}
+                {qualificationPoints}
                 <FlashOnIcon sx={{ color: "gold", fontSize: "1rem" }} />
               </RatingSubtitle>
             </div>

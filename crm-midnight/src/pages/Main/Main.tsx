@@ -27,8 +27,6 @@ import { gamesAPI, profileAPI, ratingAPI } from "../../utils/api";
 import { GameType, ProfileType, RatingType } from "../../types";
 import { getTournamentImage } from "../../utils/tournamentImages";
 
-const RatingEpxl = 500;
-
 export default function Main() {
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [rating, setRating] = useState<RatingType[]>([]);
@@ -122,17 +120,19 @@ export default function Main() {
     return sortedUpcoming[0];
   };
 
-  const calcWidth = () => {
-    if (!profile?.user) return 0;
-    const width = (profile.user.points / RatingEpxl) * 100;
-    return Math.min(width, 100);
-  };
-
   const currentUserInRating = rating?.find(
     (item) => item.user.user_id === profile?.user?.user_id
   );
-
+  const currentRatingPoints = currentUserInRating?.points ?? profile?.user?.points ?? 0;
+  const qualificationPoints =
+    rating[26]?.points ?? rating[rating.length - 1]?.points ?? 0;
   const currentUserId = currentUserInRating?.user?.user_id || profile?.user?.user_id;
+
+  const calcWidth = () => {
+    if (qualificationPoints <= 0) return 0;
+    const width = (currentRatingPoints / qualificationPoints) * 100;
+    return Math.min(width, 100);
+  };
 
   const getVisibleRows = (): RatingType[] => {
     if (!rating || rating.length === 0) return [];
@@ -234,11 +234,11 @@ export default function Main() {
             }}
           >
             <RatingSubtitle style={{ fontSize: "12px" }}>
-              Рейтинг {profile?.user?.points || 0}
+              Рейтинг {currentRatingPoints}
               <FlashOnIcon sx={{ color: "gold", fontSize: "1rem" }} />
             </RatingSubtitle>
             <RatingSubtitle style={{ fontSize: "12px" }}>
-              {RatingEpxl}{" "}
+              {qualificationPoints}
               <FlashOnIcon sx={{ color: "gold", fontSize: "1rem" }} />
             </RatingSubtitle>
           </div>
