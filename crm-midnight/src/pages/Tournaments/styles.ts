@@ -62,46 +62,57 @@ export const PastTab = styled.div`
 `;
 export const TournamentCardContainer = styled.div`
   width: 100%;
-  height: 79px;
+  min-height: 96px;
   border-radius: 25px;
   background: linear-gradient(to right, rgb(17, 20, 25), rgb(30, 32, 36));
   margin-top: 5px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
+  overflow: hidden;
+  cursor: pointer;
 `;
 
 export const InfoCardContainer = styled.div`
-  width: 180px;
-  height: 39px;
+  flex: 1 1 auto;
+  min-width: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: max-content max-content;
   grid-template-rows: auto auto;
-  gap: 12px;
-  padding: 20px;
+  column-gap: 18px;
+  row-gap: 10px;
+  align-content: center;
+  padding: 18px 16px 16px 20px;
 `;
 
 export const TournamentName = styled.div`
   grid-column: 1 / 3;
   font-size: 15px;
   font-weight: 500;
+  line-height: 20px;
   color: #fff;
-  height: 15px;
+  min-height: 40px;
+  display: -webkit-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 `;
 export const TimeContainer = styled.div`
-  grid-column: 1 / 2;
-  width: auto;
-  height: 12px;
+  width: max-content;
+  min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 5px;
 `;
 export const TimeTitle = styled.div`
   width: auto;
-  height: 12px;
   font-weight: 400;
   font-size: 12px;
+  line-height: 14px;
   color: #fff;
+  white-space: nowrap;
 `;
 
 export const CurrentTournamentContainer = styled.div`

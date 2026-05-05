@@ -14,9 +14,9 @@ import {
 } from "./styles";
 import { ReactComponent as Calendar } from "../../assets/calendar_date.svg";
 import { ReactComponent as Time } from "../../assets/time.svg";
-import tournament_image from "../../assets/tournament_image.png";
 import { GameType, TournamentHistoryType } from "../../types";
 import { gamesAPI, tournamentHistoryAPI } from "../../utils/api";
+import { getTournamentImage } from "../../utils/tournamentImages";
 import { useNavigate } from "react-router-dom";
 
 export default function Schedule() {
@@ -122,7 +122,7 @@ export default function Schedule() {
                 <TimeTitle>{formatTime(item.time)}</TimeTitle>
               </TimeContainer>
             </InfoCardContainer>
-            <img src={tournament_image} alt="img" />
+            <img src={getTournamentImage(item.name)} alt={item.name} style={currentImageStyle} />
           </TournamentCardContainer>
         ))}
 
@@ -136,7 +136,11 @@ export default function Schedule() {
             <div style={pastInfoStyle}>
               <TournamentName style={pastOnlyNameStyle}>{item.tournament_name}</TournamentName>
             </div>
-            <img src={tournament_image} alt="img" style={pastImageStyle} />
+            <img
+              src={getTournamentImage(item.tournament_name)}
+              alt={item.tournament_name}
+              style={pastImageStyle}
+            />
           </TournamentCardContainer>
         ))}
       {!!error && <div style={{ color: "#ff8585", padding: 16 }}>{String(error)}</div>}
@@ -196,6 +200,14 @@ const inactiveTabStyle = {
   cursor: "pointer",
 };
 
+const currentImageStyle = {
+  width: 132,
+  minWidth: 132,
+  height: "100%",
+  objectFit: "cover" as const,
+  objectPosition: "center" as const,
+};
+
 const pastCardStyle = {
   minHeight: 88,
   height: 88,
@@ -230,7 +242,8 @@ const pastImageStyle = {
   minWidth: 112,
   height: "100%",
   objectFit: "cover" as const,
-  opacity: 0.72,
+  objectPosition: "center" as const,
+  opacity: 0.78,
 };
 
 const overlayStyle = {

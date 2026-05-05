@@ -1,57 +1,51 @@
-// src/utils/tournamentImages.ts
-// import defaultTournamentImage from "../assets/grand_opening.jpg";
-
-// Импортируем картинки для каждого турнира
 import midnight_phoenix from "../assets/MIDNIGHT Phoenix.jpg";
 import deep_stack from "../assets/DEEP STACK.jpg";
 import freezout from "../assets/FREEZOUT.jpg";
 import midnight_gift from "../assets/MIDNIGHT Gift.jpg";
-import freeroll from '../assets/FREEROLL.jpg'
-import speed_racer from '../assets/SPEED RACER.jpg'
-import classic_holdem from '../assets/HOLDEM Classic.jpg'
-import midnight_poker from '../assets/MIDNIGHT Poker.jpg'
-import midnight_knokout from '../assets/MIDNIGHT KNOKOUT.jpg'
+import freeroll from "../assets/FREEROLL.jpg";
+import speed_racer from "../assets/SPEED RACER.jpg";
+import classic_holdem from "../assets/HOLDEM Classic.jpg";
+import midnight_poker from "../assets/MIDNIGHT Poker.jpg";
+import midnight_knokout from "../assets/MIDNIGHT KNOKOUT.jpg";
+import contract_tournament from "../assets/CONTRACT TOURNAMENT.jpg";
+import defaultTournamentImage from "../assets/tournament_image.png";
 
-// Создаем маппинг названий турниров на импортированные картинки
 const TOURNAMENT_IMAGES_MAP: Record<string, string> = {
-  "MIDNIGHT Phoenix": midnight_phoenix,
+  "MIDNIGHT PHOENIX": midnight_phoenix,
   "DEEP STACK": deep_stack,
   "FREEZOUT": freezout,
-  "MIDNIGHT Gift": midnight_gift,
+  "FREEZEOUT": freezout,
+  "MIDNIGHT GIFT": midnight_gift,
   "FREEROLL": freeroll,
   "SPEED RACER": speed_racer,
   "CLASSIC HOLDEM": classic_holdem,
-  "MIDNIGHT Poker": midnight_poker,
-  "MIDNIGHT KNOKOUT": midnight_knokout
+  "MIDNIGHT POKER": midnight_poker,
+  "MIDNIGHT KNOKOUT": midnight_knokout,
+  "CONTRACT TOURNAMENT": contract_tournament,
 };
 
-// Функция для получения картинки по названию турнира
-export const getTournamentImage = (tournamentName: string): string => {
-  // Проверяем прямое совпадение
-  if (TOURNAMENT_IMAGES_MAP[tournamentName]) {
-    return TOURNAMENT_IMAGES_MAP[tournamentName];
-  }
-
-  // Нормализуем имя для поиска (на случай небольших различий в написании)
-  const normalizedName = tournamentName
+const normalizeTournamentName = (tournamentName: string): string =>
+  tournamentName
     .trim()
-    .toLowerCase();
+    .replace(/\s+/g, " ")
+    .toUpperCase();
 
-  // Ищем совпадение среди ключей с нормализацией
-  const matchingKey = Object.keys(TOURNAMENT_IMAGES_MAP).find(key => 
-    key.trim().toLowerCase() === normalizedName
-  );
-
-  if (matchingKey) {
-    return TOURNAMENT_IMAGES_MAP[matchingKey];
+export const getTournamentImage = (tournamentName: string): string => {
+  if (!tournamentName) {
+    return defaultTournamentImage;
   }
 
-  // Если картинка не найдена, возвращаем дефолтную
+  const normalizedName = normalizeTournamentName(tournamentName);
+  const directMatch = TOURNAMENT_IMAGES_MAP[normalizedName];
+
+  if (directMatch) {
+    return directMatch;
+  }
+
   console.warn(`Картинка для турнира "${tournamentName}" не найдена, используется дефолтная`);
-  return '';
+  return defaultTournamentImage;
 };
 
-// Опционально: функция для проверки, есть ли кастомная картинка для турнира
 export const hasCustomTournamentImage = (tournamentName: string): boolean => {
-  return tournamentName in TOURNAMENT_IMAGES_MAP;
+  return normalizeTournamentName(tournamentName) in TOURNAMENT_IMAGES_MAP;
 };
