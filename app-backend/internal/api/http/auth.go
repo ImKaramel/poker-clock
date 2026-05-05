@@ -291,5 +291,5 @@ func defaultFrontendURL(frontendURL string) string {
 		return frontendURL
 	}
 
-	return "https://www.midnight-club-app.ru"
+	return "https://midnight-club.ru"
 }
