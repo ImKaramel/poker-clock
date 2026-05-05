@@ -2,7 +2,7 @@ import React, { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { useTelegram } from "./hooks/useTelegram";
-import { authAPI } from "./utils/api";
+import { AUTH_TOKEN_EVENT, authAPI } from "./utils/api";
 
 const Schedule = lazy(() => import("./pages/Tournaments/Schedule"));
 const About = lazy(() => import("./pages/About/About"));
@@ -26,21 +26,28 @@ const HIDE_MENU_ROUTES = new Set([
   "/web-auth",
 ]);
 
+const decodeBase64Url = (value: string): string => {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padding = normalized.length % 4;
+  const padded = normalized + (padding ? "=".repeat(4 - padding) : "");
+  return atob(padded);
+};
+
 const checkTokenValidity = (token: string | null): boolean => {
   if (!token) return false;
 
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    const currentTime = Date.now() / 1000;
+    const payloadPart = token.split(".")[1];
 
-    if (payload.exp && payload.exp < currentTime) {
-      localStorage.removeItem("auth_token");
+    if (!payloadPart) {
       return false;
     }
 
-    return true;
+    const payload = JSON.parse(decodeBase64Url(payloadPart));
+    const currentTime = Date.now() / 1000;
+
+    return !(payload.exp && payload.exp < currentTime);
   } catch {
-    localStorage.removeItem("auth_token");
     return false;
   }
 };
@@ -60,18 +67,52 @@ const Loader = styled.div`
 const App: React.FC = () => {
   const { user, isTelegram, isReady } = useTelegram();
   const [authError, setAuthError] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() =>
+    checkTokenValidity(localStorage.getItem("auth_token"))
+  );
   const [isLoadingAuthCheck, setIsLoadingAuthCheck] = useState<boolean>(true);
 
   const location = useLocation();
   const hideMenu = useMemo(() => HIDE_MENU_ROUTES.has(location.pathname), [location.pathname]);
+  const hasStoredToken = !isTelegram && checkTokenValidity(localStorage.getItem("auth_token"));
+  const canUseAuthenticatedRoutes = isAuthenticated || hasStoredToken;
+
+  useEffect(() => {
+    if (!isReady || isTelegram) {
+      return;
+    }
+
+    const syncStoredAuth = () => {
+      const token = localStorage.getItem("auth_token");
+      const isValid = checkTokenValidity(token);
+
+      if (token && !isValid) {
+        localStorage.removeItem("auth_token");
+      }
+
+      setIsAuthenticated(isValid);
+    };
+
+    syncStoredAuth();
+    window.addEventListener(AUTH_TOKEN_EVENT, syncStoredAuth);
+    window.addEventListener("storage", syncStoredAuth);
+
+    return () => {
+      window.removeEventListener(AUTH_TOKEN_EVENT, syncStoredAuth);
+      window.removeEventListener("storage", syncStoredAuth);
+    };
+  }, [isReady, isTelegram]);
 
   useEffect(() => {
     if (!isReady) return;
 
     if (!isTelegram) {
       const token = localStorage.getItem("auth_token");
-      setIsAuthenticated(checkTokenValidity(token));
+      const isValid = checkTokenValidity(token);
+      if (token && !isValid) {
+        localStorage.removeItem("auth_token");
+      }
+      setIsAuthenticated(isValid);
       setIsLoadingAuthCheck(false);
       return;
     }
@@ -137,7 +178,11 @@ const App: React.FC = () => {
     }
   }
 
-  if (!isAuthenticated && !isTelegram && location.pathname !== "/web-auth") {
+  if (canUseAuthenticatedRoutes && location.pathname === "/web-auth") {
+    return <Navigate to="/" replace />;
+  }
+
+  if (!canUseAuthenticatedRoutes && !isTelegram && location.pathname !== "/web-auth") {
     return <Navigate to="/web-auth" replace />;
   }
 
@@ -151,7 +196,7 @@ const App: React.FC = () => {
           <Route path="/rating-page" element={<RatingPage />} />
           <Route path="/web-auth" element={<WebAuth />} />
 
-          {isAuthenticated ? (
+          {canUseAuthenticatedRoutes ? (
             <>
               <Route path="/" element={<Main />} />
               <Route path="/rating" element={<Rating />} />

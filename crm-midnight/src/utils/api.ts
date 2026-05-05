@@ -1,6 +1,28 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.midnight-club-app.ru/api';
+const resolveDefaultApiUrl = () => {
+  if (typeof window === 'undefined') {
+    return 'https://api.midnight-club-app.ru/api';
+  }
+
+  const hostname = window.location.hostname.toLowerCase();
+
+  if (hostname === 'midnight-club.ru' || hostname === 'www.midnight-club.ru') {
+    return 'https://api.midnight-club.ru/api';
+  }
+
+  return 'https://api.midnight-club-app.ru/api';
+};
+
+export const AUTH_TOKEN_EVENT = 'auth-token-changed';
+
+export const emitAuthTokenChanged = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(AUTH_TOKEN_EVENT));
+  }
+};
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || resolveDefaultApiUrl();
 const API_FALLBACK_URL = process.env.REACT_APP_API_FALLBACK_URL;
 const API_BASE_URLS = [
   API_BASE_URL,
@@ -32,6 +54,7 @@ api.interceptors.response.use(
 
     if (status === 401 && !isPasswordAuthRequest) {
       localStorage.removeItem('auth_token');
+      emitAuthTokenChanged();
       return Promise.reject(error);
     }
 

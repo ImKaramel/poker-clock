@@ -1,7 +1,7 @@
 import React, { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import background from "../../assets/background.jpg";
-import { authAPI } from "../../utils/api";
+import { authAPI, emitAuthTokenChanged } from "../../utils/api";
 
 type Mode = "login" | "register";
 
@@ -37,6 +37,7 @@ const WebAuth: React.FC = () => {
 
     if (token) {
       localStorage.setItem("auth_token", token);
+      emitAuthTokenChanged();
       navigate("/", { replace: true });
       return;
     }
@@ -88,6 +89,7 @@ const WebAuth: React.FC = () => {
             });
 
       localStorage.setItem("auth_token", response.data.token);
+      emitAuthTokenChanged();
       navigate("/", { replace: true });
     } catch (err: any) {
       setError(err?.response?.data?.error || "Неверные данные.");
