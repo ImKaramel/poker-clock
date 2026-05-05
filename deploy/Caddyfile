@@ -1,4 +1,4 @@
-api.midnight-club-app.ru, api.midnight-club.ru {
+api.midnight-club-app.ru {
 
     encode gzip
 

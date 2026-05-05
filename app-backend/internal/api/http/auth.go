@@ -274,8 +274,8 @@ func (h *Handlers) TelegramWebAuthCallback(c *gin.Context) {
 	)
 
 	redirectURL := fmt.Sprintf(
-		"%s/web-auth?token=%s",
-		strings.TrimRight(defaultFrontendURL(h.FrontendURL), "/"),
+		"https://www.midnight-club-app.ru/web-auth?token=%s",
+		//h.FrontendURL,
 		url.QueryEscape(token),
 	)
 
@@ -284,12 +284,4 @@ func (h *Handlers) TelegramWebAuthCallback(c *gin.Context) {
 	)
 
 	c.Redirect(http.StatusFound, redirectURL)
-}
-
-func defaultFrontendURL(frontendURL string) string {
-	if strings.TrimSpace(frontendURL) != "" {
-		return frontendURL
-	}
-
-	return "https://midnight-club.ru"
 }
