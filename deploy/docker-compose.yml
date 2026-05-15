@@ -53,9 +53,10 @@ services:
     container_name: telegram-bot
     restart: always
     environment:
-     TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-     API_BASE_URL: http://app-backend:8080/api
-     MINI_APP_URL: ${MINI_APP_URL}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      API_BASE_URL: http://app-backend:8080/api
+      ADMIN_TELEGRAM_IDS: ${ADMIN_TELEGRAM_IDS}
+      MINI_APP_URL: ${MINI_APP_URL}
     depends_on:
       - app-backend
     networks:
