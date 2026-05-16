@@ -24,6 +24,7 @@ func Mount(
 	api.POST("/auth/telegram", h.TelegramAuth)
 	api.GET("/auth/telegram/callback", h.TelegramWebAuthCallback)
 	api.POST("/auth/register", opt, h.RegisterPassword)
+	api.POST("/auth/register/verify-code", h.VerifyRegisterPasswordCode)
 	api.POST("/auth/login", h.LoginPassword)
 	api.GET("/bot/recipients", h.BotRecipients)
 

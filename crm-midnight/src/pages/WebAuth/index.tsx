@@ -19,6 +19,8 @@ const WebAuth: React.FC = () => {
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [awaitingVerification, setAwaitingVerification] = useState(false);
   const [error, setError] = useState(locationState?.authError || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,6 +52,12 @@ const WebAuth: React.FC = () => {
     if (!usernamePattern.test(username)) {
       return "Username: 5-32 символа, только a-z, 0-9 и _.";
     }
+    if (awaitingVerification) {
+      if (!/^\d{6}$/.test(verificationCode.trim())) {
+        return "Введите 6-значный код из Telegram.";
+      }
+      return "";
+    }
     if (password.length < 8 || !/[a-zа-яё]/i.test(password) || !/\d/.test(password)) {
       return "Пароль: минимум 8 символов, хотя бы 1 буква и 1 цифра.";
     }
@@ -80,12 +88,26 @@ const WebAuth: React.FC = () => {
       const response =
         mode === "login"
           ? await authAPI.login({ telegram_username: username, password })
-          : await authAPI.register({
-              telegram_username: username,
-              nickname: nickname.trim(),
-              password,
-              confirm_password: confirmPassword,
-            });
+          : awaitingVerification
+            ? await authAPI.verifyRegisterCode({
+                telegram_username: username,
+                code: verificationCode.trim(),
+              })
+            : await authAPI.register({
+                telegram_username: username,
+                nickname: nickname.trim(),
+                password,
+                confirm_password: confirmPassword,
+              });
+
+      if (mode === "register" && response.status === 202) {
+        setAwaitingVerification(true);
+        setPassword("");
+        setConfirmPassword("");
+        setVerificationCode("");
+        setError(response.data?.message || "Мы отправили код в Telegram.");
+        return;
+      }
 
       localStorage.setItem("auth_token", response.data.token);
       navigate("/", { replace: true });
@@ -99,6 +121,8 @@ const WebAuth: React.FC = () => {
   const switchMode = (nextMode: Mode) => {
     setMode(nextMode);
     setError("");
+    setAwaitingVerification(false);
+    setVerificationCode("");
   };
 
   return (
@@ -153,11 +177,12 @@ const WebAuth: React.FC = () => {
                 placeholder="username"
                 autoCapitalize="none"
                 autoComplete="username"
+                disabled={awaitingVerification}
                 style={inputStyle}
               />
             </label>
 
-            {mode === "register" && (
+            {mode === "register" && !awaitingVerification && (
               <label style={labelStyle}>
                 Nickname
                 <input
@@ -170,18 +195,20 @@ const WebAuth: React.FC = () => {
               </label>
             )}
 
-            <label style={labelStyle}>
-              Пароль
-              <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                type="password"
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
-                style={inputStyle}
-              />
-            </label>
+            {!awaitingVerification && (
+              <label style={labelStyle}>
+                Пароль
+                <input
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  type="password"
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  style={inputStyle}
+                />
+              </label>
+            )}
 
-            {mode === "register" && (
+            {mode === "register" && !awaitingVerification && (
               <label style={labelStyle}>
                 Повторите пароль
                 <input
@@ -189,6 +216,20 @@ const WebAuth: React.FC = () => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   type="password"
                   autoComplete="new-password"
+                  style={inputStyle}
+                />
+              </label>
+            )}
+
+            {mode === "register" && awaitingVerification && (
+              <label style={labelStyle}>
+                Код из Telegram
+                <input
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  inputMode="numeric"
+                  placeholder="6 цифр"
+                  autoComplete="one-time-code"
                   style={inputStyle}
                 />
               </label>
@@ -208,7 +249,13 @@ const WebAuth: React.FC = () => {
             )}
 
             <button type="submit" disabled={isSubmitting} style={primaryButtonStyle}>
-              {isSubmitting ? "Проверка..." : mode === "login" ? "Войти" : "Зарегистрироваться"}
+              {isSubmitting
+                ? "Проверка..."
+                : mode === "login"
+                  ? "Войти"
+                  : awaitingVerification
+                    ? "Подтвердить код"
+                    : "Зарегистрироваться"}
             </button>
           </form>
         </section>

@@ -76,6 +76,9 @@ export const authAPI = {
   }) => {
     return api.post("/auth/register", data);
   },
+  verifyRegisterCode: (data: { telegram_username: string; code: string }) => {
+    return api.post("/auth/register/verify-code", data);
+  },
   linkPassword: (data: { password: string; confirm_password: string }) => {
     return api.post("/auth/link-password", data);
   },

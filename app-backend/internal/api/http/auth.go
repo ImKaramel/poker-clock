@@ -1,8 +1,12 @@
 package httpapi
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -17,6 +21,8 @@ import (
 const authGenericError = "неверные данные"
 
 var passwordAuthLimiter = newAuthLimiter(5, 10*time.Minute)
+
+const telegramVerificationMessage = "Код подтверждения для установки пароля в Midnight Club: %s\n\nЕсли это были не вы, просто проигнорируйте сообщение."
 
 type authLimiter struct {
 	mu       sync.Mutex
@@ -71,6 +77,58 @@ func (l *authLimiter) fail(key string) {
 func authLimitKey(c *gin.Context, username string) string {
 	ip := c.ClientIP()
 	return ip + ":" + strings.ToLower(strings.TrimSpace(strings.TrimPrefix(username, "@")))
+}
+
+func (h *Handlers) sendTelegramMessage(ctx context.Context, chatID string, text string) error {
+	if h.TelegramBotToken == "" {
+		return errors.New("telegram bot token is empty")
+	}
+
+	payload := map[string]any{
+		"chat_id": chatID,
+		"text":    text,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		"https://api.telegram.org/bot"+h.TelegramBotToken+"/sendMessage",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if resp.StatusCode >= http.StatusBadRequest {
+		return fmt.Errorf("telegram send failed: %s", strings.TrimSpace(string(respBody)))
+	}
+
+	var apiResp struct {
+		OK          bool   `json:"ok"`
+		Description string `json:"description"`
+	}
+	if err := json.Unmarshal(respBody, &apiResp); err == nil && !apiResp.OK {
+		if apiResp.Description == "" {
+			apiResp.Description = "unknown telegram error"
+		}
+		return errors.New(apiResp.Description)
+	}
+
+	return nil
 }
 
 func (h *Handlers) TelegramAuth(c *gin.Context) {
@@ -145,7 +203,7 @@ func (h *Handlers) RegisterPassword(c *gin.Context) {
 	}
 
 	authenticatedUserID, _ := infraauth.UserIDFromContext(c)
-	token, u, err := h.UC.RegisterPasswordUser(
+	result, err := h.UC.RegisterPasswordUser(
 		c.Request.Context(),
 		body.TelegramUsername,
 		body.Nickname,
@@ -162,11 +220,65 @@ func (h *Handlers) RegisterPassword(c *gin.Context) {
 		return
 	}
 
+	if result.RequiresVerification && result.VerificationChallenge != nil {
+		if err := h.sendTelegramMessage(
+			c.Request.Context(),
+			result.VerificationChallenge.TelegramUserID,
+			fmt.Sprintf(telegramVerificationMessage, result.VerificationChallenge.Code),
+		); err != nil {
+			passwordAuthLimiter.fail(key)
+			h.Log.Error("telegram verification send failed", "err", err)
+			c.JSON(http.StatusBadGateway, gin.H{
+				"error": "не удалось отправить код в Telegram. Откройте бота и нажмите /start, затем повторите попытку",
+			})
+			return
+		}
+
+		c.JSON(http.StatusAccepted, gin.H{
+			"requires_verification": true,
+			"message":               "Мы отправили код подтверждения в Telegram",
+		})
+		return
+	}
+
 	passwordAuthLimiter.success(key)
 	c.JSON(http.StatusCreated, gin.H{
+		"token": result.Token,
+		"user":  userToMap(result.User),
+		"isNew": true,
+	})
+}
+
+func (h *Handlers) VerifyRegisterPasswordCode(c *gin.Context) {
+	var body struct {
+		TelegramUsername string `json:"telegram_username"`
+		Code             string `json:"code"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": authGenericError})
+		return
+	}
+
+	token, u, err := h.UC.VerifyPasswordRegistrationCode(c.Request.Context(), body.TelegramUsername, body.Code)
+	if err != nil {
+		status := http.StatusBadRequest
+		message := authGenericError
+		if errors.Is(err, usecase.ErrVerificationCode) {
+			status = http.StatusUnauthorized
+			message = "неверный или устаревший код"
+		}
+		if errors.Is(err, usecase.ErrPasswordLinked) {
+			status = http.StatusConflict
+		}
+		c.JSON(status, gin.H{"error": message})
+		return
+	}
+
+	passwordAuthLimiter.success(authLimitKey(c, body.TelegramUsername))
+	c.JSON(http.StatusOK, gin.H{
 		"token": token,
 		"user":  userToMap(u),
-		"isNew": true,
+		"isNew": false,
 	})
 }
 
