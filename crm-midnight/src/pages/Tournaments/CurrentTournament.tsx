@@ -108,7 +108,7 @@ export default function CurrentTournament() {
     <CurrentTournamentContainer>
       <TitleContainer>
         <img
-          src={getTournamentImage(game?.name || "Загрузка...")}
+          src={getTournamentImage(game?.name || "Загрузка...", game?.photo)}
           style={{ height: "100%", width: "100%", objectFit: "contain" }}
           alt="Выбранный турнир"
         />
