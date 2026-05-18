@@ -39,6 +39,7 @@ type Service struct {
 
 type Storage interface {
 	UploadAvatar(ctx context.Context, userID string, data []byte) (string, error)
+	UploadTournamentPhoto(ctx context.Context, data []byte) (string, error)
 }
 
 func (s *Service) issueToken(u *domain.User) (string, error) {

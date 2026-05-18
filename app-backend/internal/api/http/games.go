@@ -2,6 +2,8 @@ package httpapi
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -362,6 +364,44 @@ func (h *Handlers) GameComplete(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, tournamentHistoryToMap(th))
+}
+
+func (h *Handlers) GamePhotoUpload(c *gin.Context) {
+	fileHeader, err := c.FormFile("photo")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "photo required"})
+		return
+	}
+	if fileHeader.Size > 10*1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "photo too large"})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid photo"})
+		return
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(io.LimitReader(file, 10*1024*1024+1))
+	if err != nil || len(data) == 0 || len(data) > 10*1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid photo"})
+		return
+	}
+	if h.UC.Storage == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "storage unavailable"})
+		return
+	}
+
+	url, err := h.UC.Storage.UploadTournamentPhoto(c.Request.Context(), data)
+	if err != nil {
+		h.Log.Error("tournament photo upload", slog.Any("err", err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to upload photo"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"photo_url": url})
 }
 
 func (h *Handlers) GameUpdateParticipantAdmin(c *gin.Context) {

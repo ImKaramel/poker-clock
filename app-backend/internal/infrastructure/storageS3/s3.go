@@ -3,10 +3,13 @@ package storageS3
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -56,6 +59,41 @@ func (s *S3Storage) UploadAvatar(ctx context.Context, userID string, data []byte
 		ext = "webp"
 	}
 	key := fmt.Sprintf("avatars/%s.%s", userID, ext)
+
+	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      &s.bucket,
+		Key:         &key,
+		Body:        bytes.NewReader(data),
+		ContentType: aws.String(contentType),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	url := fmt.Sprintf("%s/%s/%s", os.Getenv("S3_ENDPOINT"), s.bucket, key)
+	return url, nil
+}
+
+func (s *S3Storage) UploadTournamentPhoto(ctx context.Context, data []byte) (string, error) {
+	contentType := http.DetectContentType(data)
+	ext := "jpg"
+	if strings.Contains(contentType, "png") {
+		ext = "png"
+	} else if strings.Contains(contentType, "webp") {
+		ext = "webp"
+	}
+
+	rnd := make([]byte, 8)
+	if _, err := rand.Read(rnd); err != nil {
+		return "", err
+	}
+
+	key := fmt.Sprintf(
+		"tournaments/%d-%s.%s",
+		time.Now().UnixMilli(),
+		hex.EncodeToString(rnd),
+		ext,
+	)
 
 	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      &s.bucket,

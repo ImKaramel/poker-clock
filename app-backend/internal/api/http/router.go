@@ -40,10 +40,11 @@ func Mount(
 		gamesAdm.DELETE("/:id", h.DeleteGame)
 		gamesAdm.GET("/:id/participants_admin", h.GameParticipantsAdmin)
 		gamesAdm.POST("/:id/add_participant_admin", h.GameAddParticipantAdmin)
-		gamesAdm.POST("/:id/remove_participant_admin", h.GameRemoveParticipantAdmin)
-		gamesAdm.POST("/:id/complete", h.GameComplete)
-		gamesAdm.POST("/:id/update_participant_admin", h.GameUpdateParticipantAdmin)
-	}
+			gamesAdm.POST("/:id/remove_participant_admin", h.GameRemoveParticipantAdmin)
+			gamesAdm.POST("/:id/complete", h.GameComplete)
+			gamesAdm.POST("/:id/update_participant_admin", h.GameUpdateParticipantAdmin)
+			gamesAdm.POST("/photo", h.GamePhotoUpload)
+		}
 
 	usersAdm := api.Group("/users")
 	usersAdm.Use(jwtMW, adm)
