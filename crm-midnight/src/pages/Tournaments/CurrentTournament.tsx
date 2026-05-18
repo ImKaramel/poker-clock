@@ -113,16 +113,16 @@ export default function CurrentTournament() {
           alt="Выбранный турнир"
         />
 
-        <InfoChip label={formatTime(game?.time || "")} />
+        {/* <InfoChip label={formatTime(game?.time || "")} /> */}
 
-        <InfoChip
+        {/* <InfoChip
           label={formatDate(game?.date || "")}
           style={{ top: "151px" }}
-        />
+        /> */}
 
         <InfoChip
           label={`Участников: ${participantsCount}`}
-          style={{ top: "186px" }}
+          style={{ top: "200px", right: '0' }}
         />
       </TitleContainer>
 
