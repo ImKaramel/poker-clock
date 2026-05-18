@@ -32,35 +32,35 @@ export default function CurrentTournament() {
   const isFull = participantsCount >= soldOut;
   const isRegistered = game ? upcomingGames.includes(game.game_id) : false;
 
-  const formatTime = (timeStr: string) => {
-    if (timeStr && timeStr.includes(":")) {
-      return timeStr.split(":").slice(0, 2).join(":");
-    }
-    return timeStr || "Время не указано";
-  };
+  // const formatTime = (timeStr: string) => {
+  //   if (timeStr && timeStr.includes(":")) {
+  //     return timeStr.split(":").slice(0, 2).join(":");
+  //   }
+  //   return timeStr || "Время не указано";
+  // };
 
-  const formatDate = (dateStr: string) => {
-    const months = [
-      "января",
-      "февраля",
-      "марта",
-      "апреля",
-      "мая",
-      "июня",
-      "июля",
-      "августа",
-      "сентября",
-      "октября",
-      "ноября",
-      "декабря",
-    ];
+  // const formatDate = (dateStr: string) => {
+  //   const months = [
+  //     "января",
+  //     "февраля",
+  //     "марта",
+  //     "апреля",
+  //     "мая",
+  //     "июня",
+  //     "июля",
+  //     "августа",
+  //     "сентября",
+  //     "октября",
+  //     "ноября",
+  //     "декабря",
+  //   ];
 
-    const date = new Date(dateStr);
-    const day = date.getDate();
-    const month = months[date.getMonth()];
+  //   const date = new Date(dateStr);
+  //   const day = date.getDate();
+  //   const month = months[date.getMonth()];
 
-    return `${day} ${month}`;
-  };
+  //   return `${day} ${month}`;
+  // };
 
   useEffect(() => {
     if (!id) return;
