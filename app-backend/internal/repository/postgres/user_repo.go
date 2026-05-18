@@ -82,12 +82,28 @@ func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*domain.
 		SELECT user_id, password, last_login, is_superuser, username, nick_name, first_name, last_name,
 			phone_number, email, date_of_birth, points, total_games_played, is_admin, is_staff, is_active, is_banned,
 			created_at, updated_at, photo_url
-		FROM users WHERE LOWER(username) = LOWER($1)`, username)
+		FROM users WHERE LOWER(username) = LOWER($1)
+		ORDER BY created_at`, username)
 	u, err := scanUser(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	return u, err
+}
+
+func (r *UserRepo) ListByUsername(ctx context.Context, username string) ([]domain.User, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT user_id, password, last_login, is_superuser, username, nick_name, first_name, last_name,
+			phone_number, email, date_of_birth, points, total_games_played, is_admin, is_staff, is_active, is_banned,
+			created_at, updated_at, photo_url
+		FROM users
+		WHERE LOWER(username) = LOWER($1)
+		ORDER BY created_at`, username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanUserRows(rows)
 }
 
 func (r *UserRepo) Update(ctx context.Context, u *domain.User) error {

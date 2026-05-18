@@ -11,6 +11,7 @@ type UserRepository interface {
 	Create(ctx context.Context, u *domain.User) error
 	GetByID(ctx context.Context, userID string) (*domain.User, error)
 	GetByUsername(ctx context.Context, username string) (*domain.User, error)
+	ListByUsername(ctx context.Context, username string) ([]domain.User, error)
 	Update(ctx context.Context, u *domain.User) error
 	Delete(ctx context.Context, userID string) error
 	List(ctx context.Context) ([]domain.User, error)

@@ -6,7 +6,7 @@ from typing import Any
 import requests
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.error import BadRequest, Forbidden, RetryAfter, TelegramError
+from telegram.error import BadRequest, Forbidden, RetryAfter, TelegramError, TimedOut
 from telegram.ext import (
     ApplicationBuilder,
     CallbackQueryHandler,
@@ -38,6 +38,11 @@ LADIES_BONUS_TEXT = "Девушкам всегда — первый вход FRE
 LADIES_BONUS_CALLBACK = "ladies_bonus"
 AWAITING_BROADCAST_KEY = "awaiting_broadcast"
 BOT_TOKEN_HEADER = "X-Bot-Token"
+TELEGRAM_CONNECT_TIMEOUT = 20
+TELEGRAM_READ_TIMEOUT = 30
+TELEGRAM_WRITE_TIMEOUT = 30
+TELEGRAM_POOL_TIMEOUT = 30
+TELEGRAM_SEND_RETRIES = 3
 
 if not BOT_TOKEN:
     raise ValueError("❌ TELEGRAM_BOT_TOKEN not set in .env")
@@ -79,17 +84,72 @@ def parse_broadcast_text(args: list[str]) -> str:
     return " ".join(args).strip()
 
 
+async def safe_reply_text(
+    update: Update,
+    text: str,
+    reply_markup: InlineKeyboardMarkup | None = None,
+):
+    message = update.effective_message
+    if message is None:
+        return None
+
+    last_error: Exception | None = None
+    for attempt in range(TELEGRAM_SEND_RETRIES):
+        try:
+            return await message.reply_text(
+                text,
+                reply_markup=reply_markup,
+                connect_timeout=TELEGRAM_CONNECT_TIMEOUT,
+                read_timeout=TELEGRAM_READ_TIMEOUT,
+                write_timeout=TELEGRAM_WRITE_TIMEOUT,
+                pool_timeout=TELEGRAM_POOL_TIMEOUT,
+            )
+        except TimedOut as exc:
+            last_error = exc
+            logger.warning("reply_text timed out", extra={"attempt": attempt + 1})
+            await asyncio.sleep(attempt + 1)
+
+    if last_error is not None:
+        raise last_error
+    return None
+
+
+async def safe_edit_text(message, text: str):
+    if message is None:
+        return None
+
+    last_error: Exception | None = None
+    for attempt in range(TELEGRAM_SEND_RETRIES):
+        try:
+            return await message.edit_text(
+                text,
+                connect_timeout=TELEGRAM_CONNECT_TIMEOUT,
+                read_timeout=TELEGRAM_READ_TIMEOUT,
+                write_timeout=TELEGRAM_WRITE_TIMEOUT,
+                pool_timeout=TELEGRAM_POOL_TIMEOUT,
+            )
+        except TimedOut as exc:
+            last_error = exc
+            logger.warning("edit_text timed out", extra={"attempt": attempt + 1})
+            await asyncio.sleep(attempt + 1)
+
+    if last_error is not None:
+        raise last_error
+    return None
+
+
 async def ensure_admin(update: Update) -> bool:
     if not ADMIN_TELEGRAM_IDS:
         if update.effective_message:
-            await update.effective_message.reply_text(
+            await safe_reply_text(
+                update,
                 "Для рассылки не настроены ADMIN_TELEGRAM_IDS. Добавим их в env и всё заработает."
             )
         return False
 
     if not is_admin(update):
         if update.effective_message:
-            await update.effective_message.reply_text("Эта команда доступна только администратору.")
+            await safe_reply_text(update, "Эта команда доступна только администратору.")
         return False
     return True
 
@@ -113,7 +173,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             ]
         )
 
-    await update.effective_message.reply_text("\n".join(lines))
+    await safe_reply_text(update, "\n".join(lines))
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -133,7 +193,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 "/cancel_broadcast — отменить рассылку",
             ]
         )
-    await update.effective_message.reply_text("\n".join(help_lines))
+    await safe_reply_text(update, "\n".join(help_lines))
 
 
 async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -147,7 +207,8 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return
 
     context.user_data[AWAITING_BROADCAST_KEY] = True
-    await update.effective_message.reply_text(
+    await safe_reply_text(
+        update,
         "Отправь следующим сообщением текст рассылки, и я разошлю его всем пользователям."
     )
 
@@ -157,10 +218,10 @@ async def cancel_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
 
     if context.user_data.pop(AWAITING_BROADCAST_KEY, None):
-        await update.effective_message.reply_text("Ок, режим рассылки отменён.")
+        await safe_reply_text(update, "Ок, режим рассылки отменён.")
         return
 
-    await update.effective_message.reply_text("Сейчас активной рассылки на ввод нет.")
+    await safe_reply_text(update, "Сейчас активной рассылки на ввод нет.")
 
 
 async def handle_broadcast_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -173,7 +234,7 @@ async def handle_broadcast_text(update: Update, context: ContextTypes.DEFAULT_TY
 
     text = (update.effective_message.text or "").strip()
     if not text:
-        await update.effective_message.reply_text("Текст пустой. Пришли обычное текстовое сообщение.")
+        await safe_reply_text(update, "Текст пустой. Пришли обычное текстовое сообщение.")
         return
 
     context.user_data.pop(AWAITING_BROADCAST_KEY, None)
@@ -192,11 +253,26 @@ async def send_broadcast_message(
     chat_id: int,
     text: str,
 ) -> None:
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=text,
-        reply_markup=broadcast_markup(),
-    )
+    last_error: Exception | None = None
+    for attempt in range(TELEGRAM_SEND_RETRIES):
+        try:
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=text,
+                reply_markup=broadcast_markup(),
+                connect_timeout=TELEGRAM_CONNECT_TIMEOUT,
+                read_timeout=TELEGRAM_READ_TIMEOUT,
+                write_timeout=TELEGRAM_WRITE_TIMEOUT,
+                pool_timeout=TELEGRAM_POOL_TIMEOUT,
+            )
+            return
+        except TimedOut as exc:
+            last_error = exc
+            logger.warning("send_message timed out", extra={"chat_id": chat_id, "attempt": attempt + 1})
+            await asyncio.sleep(attempt + 1)
+
+    if last_error is not None:
+        raise last_error
 
 
 async def run_broadcast(
@@ -204,13 +280,20 @@ async def run_broadcast(
     context: ContextTypes.DEFAULT_TYPE,
     text: str,
 ) -> None:
-    status_message = await update.effective_message.reply_text("Собираю получателей и начинаю рассылку.")
+    status_message = None
+    try:
+        status_message = await safe_reply_text(update, "Собираю получателей и начинаю рассылку.")
+    except TimedOut:
+        logger.warning("could not send initial broadcast status message")
 
     try:
-        recipients = fetch_recipients()
+        recipients = await asyncio.to_thread(fetch_recipients)
     except Exception as exc:  # noqa: BLE001
         logger.exception("failed to fetch recipients")
-        await status_message.edit_text(f"Не удалось получить список получателей: {exc}")
+        if status_message is not None:
+            await safe_edit_text(status_message, f"Не удалось получить список получателей: {exc}")
+        else:
+            await safe_reply_text(update, f"Не удалось получить список получателей: {exc}")
         return
 
     sent = 0
@@ -239,12 +322,20 @@ async def run_broadcast(
 
         await asyncio.sleep(0.05)
 
-    await status_message.edit_text(
+    summary = (
         "Рассылка завершена.\n"
         f"Успешно: {sent}\n"
         f"Ошибки: {failed}\n"
         f"Пропущено: {skipped}"
     )
+    if status_message is not None:
+        try:
+            await safe_edit_text(status_message, summary)
+            return
+        except TimedOut:
+            logger.warning("could not edit final broadcast status message")
+
+    await safe_reply_text(update, summary)
 
 
 def main() -> None:

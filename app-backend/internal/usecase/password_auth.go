@@ -7,6 +7,7 @@ import (
 	"errors"
 	"math/big"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -168,6 +169,45 @@ func fallbackUserID(username string) (string, error) {
 	return "fallback_" + username + "_" + hex.EncodeToString(b[:]), nil
 }
 
+func isFallbackAuthUserID(userID string) bool {
+	return strings.HasPrefix(userID, "fallback_")
+}
+
+func sortUsersForUsernameResolution(users []domain.User) {
+	sort.SliceStable(users, func(i, j int) bool {
+		left := users[i]
+		right := users[j]
+
+		if isFallbackAuthUserID(left.UserID) != isFallbackAuthUserID(right.UserID) {
+			return !isFallbackAuthUserID(left.UserID)
+		}
+		if left.IsBanned != right.IsBanned {
+			return !left.IsBanned
+		}
+		if left.IsActive != right.IsActive {
+			return left.IsActive
+		}
+		return left.CreatedAt.Before(right.CreatedAt)
+	})
+}
+
+func findUserByID(users []domain.User, userID string) *domain.User {
+	for i := range users {
+		if users[i].UserID == userID {
+			return &users[i]
+		}
+	}
+	return nil
+}
+
+func preferredUsernameUser(users []domain.User) *domain.User {
+	if len(users) == 0 {
+		return nil
+	}
+	sortUsersForUsernameResolution(users)
+	return &users[0]
+}
+
 func (s *Service) RegisterPasswordUser(ctx context.Context, username string, nickname string, password string, authenticatedUserID string) (*PasswordRegistrationResult, error) {
 	username = normalizeFallbackUsername(username)
 	nickname = strings.TrimSpace(nickname)
@@ -176,13 +216,14 @@ func (s *Service) RegisterPasswordUser(ctx context.Context, username string, nic
 		return nil, ErrInvalidAuthInput
 	}
 
-	existing, err := s.Users.GetByUsername(ctx, username)
+	existingUsers, err := s.Users.ListByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
-	if existing != nil {
+	if len(existingUsers) > 0 {
 		if authenticatedUserID != "" {
-			if existing.UserID != authenticatedUserID {
+			existing := findUserByID(existingUsers, authenticatedUserID)
+			if existing == nil {
 				return nil, ErrAccountMismatch
 			}
 			if existing.Password != "" {
@@ -207,6 +248,10 @@ func (s *Service) RegisterPasswordUser(ctx context.Context, username string, nic
 				Token: token,
 				User:  existing,
 			}, nil
+		}
+		existing := preferredUsernameUser(existingUsers)
+		if existing == nil {
+			return nil, ErrNotFound
 		}
 		if existing.Password != "" {
 			return nil, ErrPasswordLinked
@@ -297,19 +342,25 @@ func (s *Service) LoginPasswordUser(ctx context.Context, username string, passwo
 		return "", nil, ErrInvalidCredentials
 	}
 
-	u, err := s.Users.GetByUsername(ctx, username)
+	users, err := s.Users.ListByUsername(ctx, username)
 	if err != nil {
 		return "", nil, err
 	}
-	if u == nil || u.IsBanned || !checkPassword(u.Password, password) {
-		return "", nil, ErrInvalidCredentials
+	sortUsersForUsernameResolution(users)
+	for i := range users {
+		u := &users[i]
+		if u.IsBanned || !u.IsActive {
+			continue
+		}
+		if checkPassword(u.Password, password) {
+			token, err := s.issueToken(u)
+			if err != nil {
+				return "", nil, err
+			}
+			return token, u, nil
+		}
 	}
-
-	token, err := s.issueToken(u)
-	if err != nil {
-		return "", nil, err
-	}
-	return token, u, nil
+	return "", nil, ErrInvalidCredentials
 }
 
 func (s *Service) LinkPassword(ctx context.Context, userID string, password string) (string, *domain.User, error) {
