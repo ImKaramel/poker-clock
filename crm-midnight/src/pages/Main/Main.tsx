@@ -166,7 +166,10 @@ export default function Main() {
     <MainContainer>
       <TitleContainer onClick={handleTournamentClick}>
         <img
-          src={getTournamentImage(nearestGame?.name || "Загрузка...")}
+          src={getTournamentImage(
+            nearestGame?.name || "Загрузка...",
+            nearestGame?.photo
+          )}
           style={{ height: "100%", width: "100%", objectFit: "contain" }}
           alt="current_tournament"
         />

@@ -27,7 +27,7 @@ export interface GameType {
   min_players_for_extra_points: number,
   participants_count: number,
   participants_details: Array<any>,
-  photo: any,
+  photo?: string | null,
   points_per_extra_player: number,
   reentry_buyin: number,
   time: string

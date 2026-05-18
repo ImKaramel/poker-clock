@@ -37,7 +37,14 @@ const normalizeTournamentName = (tournamentName: string): string =>
     .replace(/\s+/g, " ")
     .toUpperCase();
 
-export const getTournamentImage = (tournamentName: string): string => {
+export const getTournamentImage = (
+  tournamentName: string,
+  uploadedPhoto?: string | null
+): string => {
+  if (uploadedPhoto && uploadedPhoto.trim()) {
+    return uploadedPhoto;
+  }
+
   if (!tournamentName) {
     return defaultTournamentImage;
   }

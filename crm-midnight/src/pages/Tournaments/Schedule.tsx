@@ -122,7 +122,11 @@ export default function Schedule() {
                 <TimeTitle>{formatTime(item.time)}</TimeTitle>
               </TimeContainer>
             </InfoCardContainer>
-            <img src={getTournamentImage(item.name)} alt={item.name} style={currentImageStyle} />
+            <img
+              src={getTournamentImage(item.name, item.photo)}
+              alt={item.name}
+              style={currentImageStyle}
+            />
           </TournamentCardContainer>
         ))}
 
