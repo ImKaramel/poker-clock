@@ -22,11 +22,11 @@ const WebAuth: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [awaitingVerification, setAwaitingVerification] = useState(false);
-  const [notice, setNotice] = useState("");
   const [error, setError] = useState(locationState?.authError || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const username = useMemo(() => normalizeUsername(telegramUsername), [telegramUsername]);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     let token = params.get("token");
@@ -78,7 +78,6 @@ const WebAuth: React.FC = () => {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
-    setNotice("");
 
     const validationError = validateForm();
     if (validationError) {
@@ -108,7 +107,7 @@ const WebAuth: React.FC = () => {
         setPassword("");
         setConfirmPassword("");
         setVerificationCode("");
-        setNotice(response.data?.message || "Мы отправили код в Telegram.");
+        setError(response.data?.message || "Мы отправили код в Telegram.");
         return;
       }
 
@@ -125,7 +124,6 @@ const WebAuth: React.FC = () => {
   const switchMode = (nextMode: Mode) => {
     setMode(nextMode);
     setError("");
-    setNotice("");
     setAwaitingVerification(false);
     setVerificationCode("");
   };
@@ -240,19 +238,6 @@ const WebAuth: React.FC = () => {
               </label>
             )}
 
-            {notice && (
-              <div style={{
-                color: "#d8f4ff",
-                background: "rgba(25, 90, 130, 0.26)",
-                border: "1px solid rgba(84, 189, 232, 0.28)",
-                borderRadius: 8,
-                padding: "10px 12px",
-                fontSize: 14,
-              }}>
-                {notice}
-              </div>
-            )}
-
             {error && (
               <div style={{
                 color: "#ffb4b4",
@@ -275,7 +260,6 @@ const WebAuth: React.FC = () => {
                     ? "Подтвердить код"
                     : "Зарегистрироваться"}
             </button>
-
           </form>
         </section>
 

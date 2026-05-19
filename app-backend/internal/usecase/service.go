@@ -480,19 +480,10 @@ func (s *Service) validateTelegramWebAuthHash(queryParams url.Values, botToken s
 		return fmt.Errorf("hash not found")
 	}
 
-	allowedFields := map[string]bool{
-		"id":         true,
-		"first_name": true,
-		"last_name":  true,
-		"username":   true,
-		"photo_url":  true,
-		"auth_date":  true,
-	}
-
-	// Создаем копию параметров без hash и без наших служебных query params
+	// Создаем копию параметров без hash
 	authData := make(url.Values)
 	for key, values := range queryParams {
-		if key != "hash" && allowedFields[key] {
+		if key != "hash" {
 			authData[key] = values
 		}
 	}

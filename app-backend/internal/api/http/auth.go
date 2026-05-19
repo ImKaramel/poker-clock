@@ -79,41 +79,14 @@ func authLimitKey(c *gin.Context, username string) string {
 	return ip + ":" + strings.ToLower(strings.TrimSpace(strings.TrimPrefix(username, "@")))
 }
 
-func buildFrontendWebAuthURL(frontendURL string, values url.Values) string {
-	base := strings.TrimRight(frontendURL, "/")
-	if base == "" {
-		base = "https://www.midnight-club-app.ru"
-	}
-
-	if len(values) == 0 {
-		return base + "/web-auth"
-	}
-	return base + "/web-auth?" + values.Encode()
-}
-
 func (h *Handlers) sendTelegramMessage(ctx context.Context, chatID string, text string) error {
 	if h.TelegramBotToken == "" {
 		return errors.New("telegram bot token is empty")
 	}
 
-	webVersionURL := strings.TrimSpace(h.FrontendURL)
-	if webVersionURL == "" {
-		webVersionURL = "https://midnight-club-app.ru"
-	}
-
 	payload := map[string]any{
 		"chat_id": chatID,
 		"text":    text,
-		"reply_markup": map[string]any{
-			"inline_keyboard": [][]map[string]string{
-				{
-					{
-						"text": "Веб-версия",
-						"url":  webVersionURL,
-					},
-				},
-			},
-		},
 	}
 
 	body, err := json.Marshal(payload)
@@ -253,6 +226,7 @@ func (h *Handlers) RegisterPassword(c *gin.Context) {
 			result.VerificationChallenge.TelegramUserID,
 			fmt.Sprintf(telegramVerificationMessage, result.VerificationChallenge.Code),
 		); err != nil {
+			passwordAuthLimiter.fail(key)
 			h.Log.Error("telegram verification send failed", "err", err)
 			c.JSON(http.StatusBadGateway, gin.H{
 				"error": "не удалось отправить код в Telegram. Откройте бота и нажмите /start, затем повторите попытку",
@@ -262,8 +236,7 @@ func (h *Handlers) RegisterPassword(c *gin.Context) {
 
 		c.JSON(http.StatusAccepted, gin.H{
 			"requires_verification": true,
-			"telegram_code_sent":    true,
-			"message":               "Мы отправили код подтверждения в Telegram. Если сообщение не видно, откройте чат с ботом.",
+			"message":               "Мы отправили код подтверждения в Telegram",
 		})
 		return
 	}
@@ -376,8 +349,6 @@ func (h *Handlers) LinkPassword(c *gin.Context) {
 // TelegramWebAuthCallback - GET /api/auth/telegram/callback
 func (h *Handlers) TelegramWebAuthCallback(c *gin.Context) {
 	botToken := h.TelegramBotToken
-	flow := c.Query("flow")
-	username := strings.TrimSpace(c.Query("username"))
 
 	if botToken == "" {
 		h.Log.Error("telegram bot token is empty")
@@ -402,15 +373,9 @@ func (h *Handlers) TelegramWebAuthCallback(c *gin.Context) {
 			"err", err,
 		)
 
-		redirectParams := url.Values{}
-		redirectParams.Set("error", "telegram_auth_failed")
-		if flow != "" {
-			redirectParams.Set("flow", flow)
-		}
-		if username != "" {
-			redirectParams.Set("username", username)
-		}
-		c.Redirect(http.StatusFound, buildFrontendWebAuthURL(h.FrontendURL, redirectParams))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
 		return
 	}
 
@@ -420,15 +385,11 @@ func (h *Handlers) TelegramWebAuthCallback(c *gin.Context) {
 		"is_new", isNew,
 	)
 
-	redirectParams := url.Values{}
-	redirectParams.Set("token", token)
-	if flow != "" {
-		redirectParams.Set("flow", flow)
-	}
-	if username != "" {
-		redirectParams.Set("username", username)
-	}
-	redirectURL := buildFrontendWebAuthURL(h.FrontendURL, redirectParams)
+	redirectURL := fmt.Sprintf(
+		"https://www.midnight-club-app.ru/web-auth?token=%s",
+		//h.FrontendURL,
+		url.QueryEscape(token),
+	)
 
 	h.Log.Info("➡️ Redirecting to",
 		"url", redirectURL,

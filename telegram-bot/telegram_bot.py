@@ -31,7 +31,6 @@ ADMIN_TELEGRAM_IDS = {
     for value in os.getenv("ADMIN_TELEGRAM_IDS", "").split(",")
     if value.strip()
 }
-WEB_VERSION_URL = os.getenv("WEB_VERSION_URL", os.getenv("FRONTEND_URL", "https://midnight-club-app.ru"))
 
 PROMOTIONS_URL = "https://t.me/midnight_poker_club/77"
 ADMIN_URL = "https://t.me/midnight_club_admin"
@@ -57,9 +56,6 @@ def is_admin(update: Update) -> bool:
 def broadcast_markup() -> InlineKeyboardMarkup:
     keyboard = [
         [
-            InlineKeyboardButton("Веб-версия", url=WEB_VERSION_URL),
-        ],
-        [
             InlineKeyboardButton("Акции", url=PROMOTIONS_URL),
             InlineKeyboardButton("Ссылка на администратора", url=ADMIN_URL),
         ],
@@ -82,6 +78,8 @@ def fetch_recipients() -> list[dict[str, Any]]:
     if not isinstance(users, list):
         raise ValueError("invalid recipients payload")
     return users
+
+
 def parse_broadcast_text(args: list[str]) -> str:
     return " ".join(args).strip()
 
@@ -158,7 +156,6 @@ async def ensure_admin(update: Update) -> bool:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-
     lines = [
         f"👋 Добро пожаловать в Midnight Club, {user.first_name or 'игрок'}!",
         "",
@@ -176,7 +173,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             ]
         )
 
-    await safe_reply_text(update, "\n".join(lines), reply_markup=broadcast_markup())
+    await safe_reply_text(update, "\n".join(lines))
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -196,7 +193,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 "/cancel_broadcast — отменить рассылку",
             ]
         )
-    await safe_reply_text(update, "\n".join(help_lines), reply_markup=broadcast_markup())
+    await safe_reply_text(update, "\n".join(help_lines))
 
 
 async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
