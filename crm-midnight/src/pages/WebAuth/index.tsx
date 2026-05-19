@@ -6,7 +6,6 @@ import { authAPI } from "../../utils/api";
 type Mode = "login" | "register";
 
 const AUTH_TOKEN_CHANGED_EVENT = "auth-token-changed";
-const TELEGRAM_BOT_USERNAME = process.env.REACT_APP_TELEGRAM_BOT_USERNAME || "Midnight_poker_bot";
 const usernamePattern = /^[a-z0-9_]{5,32}$/;
 
 const normalizeUsername = (value: string) =>
@@ -28,11 +27,6 @@ const WebAuth: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const username = useMemo(() => normalizeUsername(telegramUsername), [telegramUsername]);
-  const telegramVerificationLink = useMemo(
-    () => (username ? `https://t.me/${TELEGRAM_BOT_USERNAME}?start=verify_${encodeURIComponent(username)}` : `https://t.me/${TELEGRAM_BOT_USERNAME}`),
-    [username]
-  );
-
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     let token = params.get("token");
@@ -282,41 +276,6 @@ const WebAuth: React.FC = () => {
                     : "Зарегистрироваться"}
             </button>
 
-            {mode === "register" && awaitingVerification && (
-              <div style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-                alignItems: "center",
-                paddingTop: 4,
-              }}>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.74)", textAlign: "center" }}>
-                  Если код не пришёл, открой бота по ссылке ниже. Он пришлёт код в Telegram-приложение без виджета и без VPN.
-                </div>
-                <a
-                  href={telegramVerificationLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    minHeight: 42,
-                    padding: "0 16px",
-                    borderRadius: 8,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: "rgba(36,161,222,0.18)",
-                    border: "1px solid rgba(84,189,232,0.28)",
-                    color: "#8ddcff",
-                    textDecoration: "none",
-                    fontWeight: 700,
-                    width: "100%",
-                    boxSizing: "border-box",
-                  }}
-                >
-                  Открыть Telegram и получить код
-                </a>
-              </div>
-            )}
           </form>
         </section>
 
