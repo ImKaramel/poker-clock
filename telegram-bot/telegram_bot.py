@@ -80,6 +80,24 @@ def fetch_recipients() -> list[dict[str, Any]]:
     return users
 
 
+def fetch_password_registration_code(telegram_user_id: str, telegram_username: str) -> str:
+    response = requests.post(
+        f"{API_BASE_URL}/bot/password-registration-code",
+        headers={BOT_TOKEN_HEADER: BOT_TOKEN},
+        json={
+            "telegram_user_id": telegram_user_id,
+            "telegram_username": telegram_username,
+        },
+        timeout=20,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    code = str(payload.get("code", "")).strip()
+    if not code:
+        raise ValueError("verification code is missing")
+    return code
+
+
 def parse_broadcast_text(args: list[str]) -> str:
     return " ".join(args).strip()
 
@@ -156,6 +174,57 @@ async def ensure_admin(update: Update) -> bool:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    start_arg = (context.args[0].strip() if context.args else "")
+
+    if start_arg.startswith("verify_") and user is not None:
+        telegram_username = start_arg.removeprefix("verify_").strip().lower()
+        try:
+            code = await asyncio.to_thread(
+                fetch_password_registration_code,
+                str(user.id),
+                telegram_username,
+            )
+            await safe_reply_text(
+                update,
+                (
+                    f"Код подтверждения для @{telegram_username}: {code}\n\n"
+                    "Вернись на сайт, введи этот код и заверши регистрацию."
+                ),
+            )
+        except requests.HTTPError as exc:
+            status = exc.response.status_code if exc.response is not None else None
+            if status == 404:
+                await safe_reply_text(
+                    update,
+                    "Не вижу активной регистрации для этого username. Сначала начни регистрацию на сайте заново."
+                )
+                return
+            if status == 403:
+                await safe_reply_text(
+                    update,
+                    "Этот Telegram-аккаунт не совпадает с тем username, для которого создана регистрация."
+                )
+                return
+            if status == 409:
+                await safe_reply_text(
+                    update,
+                    "Для этого аккаунта пароль уже привязан. Можешь просто войти на сайте."
+                )
+                return
+            logger.exception("verification code fetch failed")
+            await safe_reply_text(
+                update,
+                "Не удалось получить код подтверждения. Попробуй ещё раз через сайт чуть позже."
+            )
+            return
+        except Exception:  # noqa: BLE001
+            logger.exception("verification code fetch failed")
+            await safe_reply_text(
+                update,
+                "Не удалось получить код подтверждения. Попробуй ещё раз через сайт чуть позже."
+            )
+            return
+
     lines = [
         f"👋 Добро пожаловать в Midnight Club, {user.first_name or 'игрок'}!",
         "",

@@ -104,6 +104,27 @@ func (s *passwordRegistrationCodeStore) consume(username, code string) (pendingP
 	return entry, true
 }
 
+func (s *passwordRegistrationCodeStore) peek(username string) (pendingPasswordRegistration, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	entry, ok := s.pending[username]
+	if !ok {
+		return pendingPasswordRegistration{}, false
+	}
+	if time.Now().After(entry.ExpiresAt) {
+		delete(s.pending, username)
+		return pendingPasswordRegistration{}, false
+	}
+	return entry, true
+}
+
+func (s *passwordRegistrationCodeStore) delete(username string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.pending, username)
+}
+
 func generateVerificationCode() (string, error) {
 	var digits strings.Builder
 	for i := 0; i < 6; i++ {
@@ -334,6 +355,76 @@ func (s *Service) VerifyPasswordRegistrationCode(ctx context.Context, username s
 		return "", nil, err
 	}
 	return token, u, nil
+}
+
+func (s *Service) CompletePasswordRegistration(ctx context.Context, authenticatedUserID string, username string) (string, *domain.User, error) {
+	username = normalizeFallbackUsername(username)
+	if authenticatedUserID == "" || !validateFallbackUsername(username) {
+		return "", nil, ErrInvalidAuthInput
+	}
+
+	entry, ok := passwordRegistrationCodes.peek(username)
+	if !ok {
+		return "", nil, ErrVerificationCode
+	}
+	if entry.UserID != authenticatedUserID {
+		return "", nil, ErrAccountMismatch
+	}
+
+	u, err := s.Users.GetByID(ctx, entry.UserID)
+	if err != nil {
+		return "", nil, err
+	}
+	if u == nil {
+		return "", nil, ErrNotFound
+	}
+	if u.Password != "" {
+		passwordRegistrationCodes.delete(username)
+		return "", nil, ErrPasswordLinked
+	}
+
+	u.Password = entry.PasswordHash
+	u.NickName = &entry.Nickname
+	if err := s.Users.Update(ctx, u); err != nil {
+		return "", nil, err
+	}
+	passwordRegistrationCodes.delete(username)
+
+	token, err := s.issueToken(u)
+	if err != nil {
+		return "", nil, err
+	}
+	return token, u, nil
+}
+
+func (s *Service) PendingPasswordRegistrationCode(ctx context.Context, telegramUserID string, username string) (string, error) {
+	username = normalizeFallbackUsername(username)
+	if telegramUserID == "" || !validateFallbackUsername(username) {
+		return "", ErrInvalidAuthInput
+	}
+
+	entry, ok := passwordRegistrationCodes.peek(username)
+	if !ok {
+		return "", ErrVerificationCode
+	}
+	if entry.UserID != telegramUserID {
+		return "", ErrAccountMismatch
+	}
+
+	u, err := s.Users.GetByID(ctx, entry.UserID)
+	if err != nil {
+		return "", err
+	}
+	if u == nil {
+		passwordRegistrationCodes.delete(username)
+		return "", ErrNotFound
+	}
+	if u.Password != "" {
+		passwordRegistrationCodes.delete(username)
+		return "", ErrPasswordLinked
+	}
+
+	return entry.Code, nil
 }
 
 func (s *Service) LoginPasswordUser(ctx context.Context, username string, password string) (string, *domain.User, error) {
