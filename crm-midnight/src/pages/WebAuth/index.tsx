@@ -5,6 +5,7 @@ import { authAPI } from "../../utils/api";
 
 type Mode = "login" | "register";
 
+const AUTH_TOKEN_CHANGED_EVENT = "auth-token-changed";
 const usernamePattern = /^[a-z0-9_]{5,32}$/;
 
 const normalizeUsername = (value: string) =>
@@ -39,6 +40,7 @@ const WebAuth: React.FC = () => {
 
     if (token) {
       localStorage.setItem("auth_token", token);
+      window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
       navigate("/", { replace: true });
       return;
     }
@@ -110,6 +112,7 @@ const WebAuth: React.FC = () => {
       }
 
       localStorage.setItem("auth_token", response.data.token);
+      window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
       navigate("/", { replace: true });
     } catch (err: any) {
       setError(err?.response?.data?.error || "Неверные данные.");

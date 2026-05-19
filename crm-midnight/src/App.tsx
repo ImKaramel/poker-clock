@@ -4,6 +4,8 @@ import styled from "styled-components";
 import { useTelegram } from "./hooks/useTelegram";
 import { authAPI } from "./utils/api";
 
+const AUTH_TOKEN_CHANGED_EVENT = "auth-token-changed";
+
 const Schedule = lazy(() => import("./pages/Tournaments/Schedule"));
 const About = lazy(() => import("./pages/About/About"));
 const CurrentTournament = lazy(() => import("./pages/Tournaments/CurrentTournament"));
@@ -26,11 +28,22 @@ const HIDE_MENU_ROUTES = new Set([
   "/web-auth",
 ]);
 
+const decodeJwtPayload = (token: string) => {
+  const [, payload] = token.split(".");
+  if (!payload) {
+    throw new Error("missing jwt payload");
+  }
+
+  const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  return JSON.parse(atob(padded));
+};
+
 const checkTokenValidity = (token: string | null): boolean => {
   if (!token) return false;
 
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
+    const payload = decodeJwtPayload(token);
     const currentTime = Date.now() / 1000;
 
     if (payload.exp && payload.exp < currentTime) {
@@ -67,11 +80,29 @@ const App: React.FC = () => {
   const hideMenu = useMemo(() => HIDE_MENU_ROUTES.has(location.pathname), [location.pathname]);
 
   useEffect(() => {
+    if (!isReady || isTelegram) {
+      return;
+    }
+
+    const syncAuthState = () => {
+      const token = localStorage.getItem("auth_token");
+      setIsAuthenticated(checkTokenValidity(token));
+    };
+
+    syncAuthState();
+    window.addEventListener("storage", syncAuthState);
+    window.addEventListener(AUTH_TOKEN_CHANGED_EVENT, syncAuthState);
+
+    return () => {
+      window.removeEventListener("storage", syncAuthState);
+      window.removeEventListener(AUTH_TOKEN_CHANGED_EVENT, syncAuthState);
+    };
+  }, [isReady, isTelegram]);
+
+  useEffect(() => {
     if (!isReady) return;
 
     if (!isTelegram) {
-      const token = localStorage.getItem("auth_token");
-      setIsAuthenticated(checkTokenValidity(token));
       setIsLoadingAuthCheck(false);
       return;
     }
@@ -139,6 +170,10 @@ const App: React.FC = () => {
 
   if (!isAuthenticated && !isTelegram && location.pathname !== "/web-auth") {
     return <Navigate to="/web-auth" replace />;
+  }
+
+  if (isAuthenticated && !isTelegram && location.pathname === "/web-auth") {
+    return <Navigate to="/" replace />;
   }
 
   return (

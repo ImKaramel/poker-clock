@@ -28,7 +28,10 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const requestUrl = String(error.config?.url || '');
     const isPasswordAuthRequest =
-      requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/register') ||
+      requestUrl.includes('/auth/register/verify-code') ||
+      requestUrl.includes('/auth/link-password');
 
     if (status === 401 && !isPasswordAuthRequest) {
       localStorage.removeItem('auth_token');
