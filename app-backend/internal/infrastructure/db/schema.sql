@@ -38,9 +38,23 @@ BEGIN
             ON users (LOWER(username));
     END IF;
 END $$;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_nick_name_unique_ci
-    ON users (LOWER(nick_name))
-    WHERE nick_name IS NOT NULL;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM (
+            SELECT LOWER(BTRIM(nick_name))
+            FROM users
+            WHERE nick_name IS NOT NULL AND BTRIM(nick_name) <> ''
+            GROUP BY LOWER(BTRIM(nick_name))
+            HAVING COUNT(*) > 1
+        ) duplicate_nicknames
+    ) THEN
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_users_nick_name_unique_ci
+            ON users (LOWER(BTRIM(nick_name)))
+            WHERE nick_name IS NOT NULL AND BTRIM(nick_name) <> '';
+    END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS contact_auth_challenges (
     token VARCHAR(96) PRIMARY KEY,

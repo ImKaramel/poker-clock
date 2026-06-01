@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import background from "../../assets/background.jpg";
 import { authAPI } from "../../utils/api";
 
@@ -12,7 +12,9 @@ const WebAuth: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const locationState = location.state as { authError?: string } | null;
-  const [challengeToken, setChallengeToken] = useState(() => localStorage.getItem(CONTACT_AUTH_TOKEN_KEY) || "");
+  const [challengeToken, setChallengeToken] = useState(
+    () => localStorage.getItem(CONTACT_AUTH_TOKEN_KEY) || "",
+  );
   const [botLink, setBotLink] = useState("");
   const [status, setStatus] = useState<ContactAuthState>(challengeToken ? "pending" : "idle");
   const [error, setError] = useState(locationState?.authError || "");
@@ -60,7 +62,6 @@ const WebAuth: React.FC = () => {
           window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
           setStatus("completed");
           navigate("/", { replace: true });
-          return;
         }
       } catch (err: any) {
         if (!isMounted) return;
@@ -133,10 +134,10 @@ const WebAuth: React.FC = () => {
           backdropFilter: "blur(6px)",
         }}>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
-            Вход через Telegram contact
+            Вход через Telegram
           </div>
           <div style={{ fontSize: 14, color: "rgba(255,255,255,0.72)", marginBottom: 16 }}>
-            Нажмите кнопку, откройте бота и поделитесь номером. После подтверждения эта страница войдёт автоматически.
+            Откройте бота и поделитесь номером. После подтверждения эта страница войдёт автоматически.
           </div>
 
           {error && <ErrorBox>{error}</ErrorBox>}
@@ -161,6 +162,15 @@ const WebAuth: React.FC = () => {
             </div>
           )}
         </section>
+
+        <a
+          href="https://t.me/Midnight_poker_bot"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "#54bde8", textAlign: "center", textDecoration: "none", fontWeight: 600 }}
+        >
+          Открыть бота в Telegram
+        </a>
       </main>
     </div>
   );
@@ -168,11 +178,11 @@ const WebAuth: React.FC = () => {
 
 const ErrorBox = ({ children }: { children: React.ReactNode }) => (
   <div style={{
-    color: "#ffb4b4",
-    background: "rgba(128, 0, 0, 0.22)",
-    border: "1px solid rgba(255, 130, 130, 0.24)",
-    borderRadius: 8,
     padding: "10px 12px",
+    borderRadius: 8,
+    border: "1px solid rgba(255,98,98,0.4)",
+    background: "rgba(122, 20, 20, 0.32)",
+    color: "#ffc8c8",
     fontSize: 14,
   }}>
     {children}
@@ -186,7 +196,7 @@ const primaryButtonStyle: React.CSSProperties = {
   border: 0,
   background: "#24a1de",
   color: "white",
-  fontWeight: 700,
+  fontWeight: 800,
   fontSize: 16,
   cursor: "pointer",
 };
@@ -195,7 +205,7 @@ const pendingBoxStyle: React.CSSProperties = {
   marginTop: 12,
   padding: "12px",
   borderRadius: 8,
-  border: "1px solid rgba(36,161,222,0.35)",
+  border: "1px solid rgba(84,189,232,0.28)",
   background: "rgba(36,161,222,0.12)",
   color: "rgba(255,255,255,0.86)",
   fontSize: 14,
