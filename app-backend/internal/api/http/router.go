@@ -21,12 +21,12 @@ func Mount(
 	jwtMW := auth.MiddlewareJWT(jwt, log)
 	adm := auth.MiddlewareAdmin(log)
 
+	api.POST("/auth/contact/start", h.ContactAuthStart)
+	api.GET("/auth/contact/status", h.ContactAuthStatus)
 	api.POST("/auth/telegram", h.TelegramAuth)
 	api.GET("/auth/telegram/callback", h.TelegramWebAuthCallback)
-	api.POST("/auth/register", opt, h.RegisterPassword)
-	api.POST("/auth/register/verify-code", h.VerifyRegisterPasswordCode)
-	api.POST("/auth/login", h.LoginPassword)
 	api.GET("/bot/recipients", h.BotRecipients)
+	api.POST("/bot/contact", h.BotContact)
 
 	api.GET("/games", opt, h.ListGames)
 	api.GET("/games/:id", opt, h.GetGame)
@@ -41,6 +41,7 @@ func Mount(
 		gamesAdm.GET("/:id/participants_admin", h.GameParticipantsAdmin)
 		gamesAdm.POST("/:id/add_participant_admin", h.GameAddParticipantAdmin)
 		gamesAdm.POST("/:id/remove_participant_admin", h.GameRemoveParticipantAdmin)
+		gamesAdm.POST("/:id/complete/preview", h.GameCompletePreview)
 		gamesAdm.POST("/:id/complete", h.GameComplete)
 		gamesAdm.POST("/:id/update_participant_admin", h.GameUpdateParticipantAdmin)
 		gamesAdm.POST("/photo", h.GamePhotoUpload)
@@ -93,7 +94,6 @@ func Mount(
 	authed := api.Group("")
 	authed.Use(jwtMW)
 	{
-		authed.POST("/auth/link-password", h.LinkPassword)
 		authed.GET("/rating", h.Rating)
 		authed.GET("/profile", h.ProfileGet)
 		authed.PATCH("/profile", h.ProfilePatch)

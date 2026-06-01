@@ -1,31 +1,22 @@
-import React, { FormEvent, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import background from "../../assets/background.jpg";
 import { authAPI } from "../../utils/api";
 
-type Mode = "login" | "register";
-
 const AUTH_TOKEN_CHANGED_EVENT = "auth-token-changed";
-const usernamePattern = /^[a-z0-9_]{5,32}$/;
+const CONTACT_AUTH_TOKEN_KEY = "contact_auth_token";
 
-const normalizeUsername = (value: string) =>
-  value.trim().toLowerCase().replace(/^@+/, "");
+type ContactAuthState = "idle" | "starting" | "pending" | "completed";
 
 const WebAuth: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const locationState = location.state as { authError?: string } | null;
-  const [mode, setMode] = useState<Mode>("login");
-  const [telegramUsername, setTelegramUsername] = useState("");
-  const [nickname, setNickname] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
-  const [awaitingVerification, setAwaitingVerification] = useState(false);
+  const [challengeToken, setChallengeToken] = useState(() => localStorage.getItem(CONTACT_AUTH_TOKEN_KEY) || "");
+  const [botLink, setBotLink] = useState("");
+  const [status, setStatus] = useState<ContactAuthState>(challengeToken ? "pending" : "idle");
   const [error, setError] = useState(locationState?.authError || "");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const username = useMemo(() => normalizeUsername(telegramUsername), [telegramUsername]);
+  const isPollingRef = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -36,96 +27,80 @@ const WebAuth: React.FC = () => {
       if (match) token = match[1];
     }
 
-    const authError = params.get("error");
-
     if (token) {
       localStorage.setItem("auth_token", token);
+      localStorage.removeItem(CONTACT_AUTH_TOKEN_KEY);
       window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
       navigate("/", { replace: true });
       return;
     }
 
-    if (authError) {
-      setError("Telegram не смог авторизовать вход. Войдите резервным способом.");
+    if (params.get("error")) {
+      setError("Telegram не смог авторизовать вход. Подтвердите номер через бота.");
     }
   }, [location, navigate]);
 
-  const validateForm = () => {
-    if (!usernamePattern.test(username)) {
-      return "Username: 5-32 символа, только a-z, 0-9 и _.";
-    }
-    if (awaitingVerification) {
-      if (!/^\d{6}$/.test(verificationCode.trim())) {
-        return "Введите 6-значный код из Telegram.";
-      }
-      return "";
-    }
-    if (password.length < 8 || !/[a-zа-яё]/i.test(password) || !/\d/.test(password)) {
-      return "Пароль: минимум 8 символов, хотя бы 1 буква и 1 цифра.";
-    }
-    if (mode === "register") {
-      const nicknameLength = Array.from(nickname.trim()).length;
-      if (nicknameLength < 2 || nicknameLength > 24) {
-        return "Nickname: 2-24 символа.";
-      }
-      if (password !== confirmPassword) {
-        return "Пароли не совпадают.";
-      }
-    }
-    return "";
-  };
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setError("");
-
-    const validationError = validateForm();
-    if (validationError) {
-      setError(validationError);
+  useEffect(() => {
+    if (!challengeToken || status !== "pending") {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const response =
-        mode === "login"
-          ? await authAPI.login({ telegram_username: username, password })
-          : awaitingVerification
-            ? await authAPI.verifyRegisterCode({
-                telegram_username: username,
-                code: verificationCode.trim(),
-              })
-            : await authAPI.register({
-                telegram_username: username,
-                nickname: nickname.trim(),
-                password,
-                confirm_password: confirmPassword,
-              });
+    let isMounted = true;
+    const poll = async () => {
+      if (isPollingRef.current) return;
+      isPollingRef.current = true;
 
-      if (mode === "register" && response.status === 202) {
-        setAwaitingVerification(true);
-        setPassword("");
-        setConfirmPassword("");
-        setVerificationCode("");
-        setError(response.data?.message || "Мы отправили код в Telegram.");
-        return;
+      try {
+        const response = await authAPI.pollContactAuth(challengeToken);
+        if (!isMounted) return;
+
+        if (response.data?.status === "completed" && response.data?.token) {
+          localStorage.setItem("auth_token", response.data.token);
+          localStorage.removeItem(CONTACT_AUTH_TOKEN_KEY);
+          window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
+          setStatus("completed");
+          navigate("/", { replace: true });
+          return;
+        }
+      } catch (err: any) {
+        if (!isMounted) return;
+        const statusCode = err?.response?.status;
+        if (statusCode === 410 || statusCode === 404 || statusCode === 409) {
+          localStorage.removeItem(CONTACT_AUTH_TOKEN_KEY);
+          setChallengeToken("");
+          setStatus("idle");
+          setError("Ссылка подтверждения устарела. Запустите вход заново.");
+        }
+      } finally {
+        isPollingRef.current = false;
       }
+    };
 
-      localStorage.setItem("auth_token", response.data.token);
-      window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
-      navigate("/", { replace: true });
+    poll();
+    const interval = window.setInterval(poll, 2500);
+    return () => {
+      isMounted = false;
+      window.clearInterval(interval);
+    };
+  }, [challengeToken, navigate, status]);
+
+  const startContactAuth = async () => {
+    try {
+      setStatus("starting");
+      setError("");
+      const response = await authAPI.startContactAuth();
+      const nextToken = response.data.token;
+      const nextBotLink = response.data.bot_link;
+
+      localStorage.setItem(CONTACT_AUTH_TOKEN_KEY, nextToken);
+      setChallengeToken(nextToken);
+      setBotLink(nextBotLink);
+      setStatus("pending");
+      window.open(nextBotLink, "_blank", "noopener,noreferrer");
     } catch (err: any) {
-      setError(err?.response?.data?.error || "Неверные данные.");
-    } finally {
-      setIsSubmitting(false);
+      setStatus("idle");
+      setError(err?.response?.data?.error || err?.message || "Не удалось начать вход через Telegram.");
     }
-  };
-
-  const switchMode = (nextMode: Mode) => {
-    setMode(nextMode);
-    setError("");
-    setAwaitingVerification(false);
-    setVerificationCode("");
   };
 
   return (
@@ -157,148 +132,56 @@ const WebAuth: React.FC = () => {
           border: "1px solid rgba(255,255,255,0.14)",
           backdropFilter: "blur(6px)",
         }}>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 8,
-            marginBottom: 16,
-          }}>
-            <button type="button" onClick={() => switchMode("login")} style={tabStyle(mode === "login")}>
-              Вход
-            </button>
-            <button type="button" onClick={() => switchMode("register")} style={tabStyle(mode === "register")}>
-              Регистрация
-            </button>
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+            Вход через Telegram contact
+          </div>
+          <div style={{ fontSize: 14, color: "rgba(255,255,255,0.72)", marginBottom: 16 }}>
+            Нажмите кнопку, откройте бота и поделитесь номером. После подтверждения эта страница войдёт автоматически.
           </div>
 
-          <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <label style={labelStyle}>
-              Telegram username
-              <input
-                value={telegramUsername}
-                onChange={(e) => setTelegramUsername(e.target.value)}
-                placeholder="username"
-                autoCapitalize="none"
-                autoComplete="username"
-                disabled={awaitingVerification}
-                style={inputStyle}
-              />
-            </label>
+          {error && <ErrorBox>{error}</ErrorBox>}
 
-            {mode === "register" && !awaitingVerification && (
-              <label style={labelStyle}>
-                Nickname
-                <input
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder="Ваш ник"
-                  autoComplete="nickname"
-                  style={inputStyle}
-                />
-              </label>
-            )}
+          <button
+            type="button"
+            onClick={startContactAuth}
+            disabled={status === "starting"}
+            style={{ ...primaryButtonStyle, marginTop: error ? 12 : 0 }}
+          >
+            {status === "starting" ? "Готовим вход..." : status === "pending" ? "Открыть бота ещё раз" : "Войти через бота"}
+          </button>
 
-            {!awaitingVerification && (
-              <label style={labelStyle}>
-                Пароль
-                <input
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  type="password"
-                  autoComplete={mode === "login" ? "current-password" : "new-password"}
-                  style={inputStyle}
-                />
-              </label>
-            )}
-
-            {mode === "register" && !awaitingVerification && (
-              <label style={labelStyle}>
-                Повторите пароль
-                <input
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  type="password"
-                  autoComplete="new-password"
-                  style={inputStyle}
-                />
-              </label>
-            )}
-
-            {mode === "register" && awaitingVerification && (
-              <label style={labelStyle}>
-                Код из Telegram
-                <input
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
-                  inputMode="numeric"
-                  placeholder="6 цифр"
-                  autoComplete="one-time-code"
-                  style={inputStyle}
-                />
-              </label>
-            )}
-
-            {error && (
-              <div style={{
-                color: "#ffb4b4",
-                background: "rgba(128, 0, 0, 0.22)",
-                border: "1px solid rgba(255, 130, 130, 0.24)",
-                borderRadius: 8,
-                padding: "10px 12px",
-                fontSize: 14,
-              }}>
-                {error}
-              </div>
-            )}
-
-            <button type="submit" disabled={isSubmitting} style={primaryButtonStyle}>
-              {isSubmitting
-                ? "Проверка..."
-                : mode === "login"
-                  ? "Войти"
-                  : awaitingVerification
-                    ? "Подтвердить код"
-                    : "Зарегистрироваться"}
-            </button>
-          </form>
+          {status === "pending" && (
+            <div style={pendingBoxStyle}>
+              <div>Ожидаю подтверждение номера в Telegram.</div>
+              {botLink && (
+                <a href={botLink} target="_blank" rel="noopener noreferrer" style={linkStyle}>
+                  Открыть бота
+                </a>
+              )}
+            </div>
+          )}
         </section>
-
-        <a
-          href="https://t.me/Midnight_poker_bot"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: "#54bde8", textAlign: "center", textDecoration: "none", fontWeight: 600 }}
-        >
-          Открыть бота в Telegram
-        </a>
       </main>
     </div>
   );
 };
 
-const labelStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 7,
-  fontSize: 14,
-  color: "rgba(255,255,255,0.82)",
-  textAlign: "left",
-};
-
-const inputStyle: React.CSSProperties = {
-  minHeight: 44,
-  borderRadius: 8,
-  border: "1px solid rgba(255,255,255,0.16)",
-  background: "rgba(255,255,255,0.08)",
-  color: "white",
-  padding: "0 12px",
-  fontSize: 16,
-  outline: "none",
-  boxSizing: "border-box",
-};
+const ErrorBox = ({ children }: { children: React.ReactNode }) => (
+  <div style={{
+    color: "#ffb4b4",
+    background: "rgba(128, 0, 0, 0.22)",
+    border: "1px solid rgba(255, 130, 130, 0.24)",
+    borderRadius: 8,
+    padding: "10px 12px",
+    fontSize: 14,
+  }}>
+    {children}
+  </div>
+);
 
 const primaryButtonStyle: React.CSSProperties = {
   minHeight: 46,
+  width: "100%",
   borderRadius: 8,
   border: 0,
   background: "#24a1de",
@@ -308,14 +191,23 @@ const primaryButtonStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const tabStyle = (active: boolean): React.CSSProperties => ({
-  minHeight: 40,
+const pendingBoxStyle: React.CSSProperties = {
+  marginTop: 12,
+  padding: "12px",
   borderRadius: 8,
-  border: active ? "1px solid #24a1de" : "1px solid rgba(255,255,255,0.14)",
-  background: active ? "rgba(36,161,222,0.22)" : "rgba(255,255,255,0.06)",
-  color: "white",
+  border: "1px solid rgba(36,161,222,0.35)",
+  background: "rgba(36,161,222,0.12)",
+  color: "rgba(255,255,255,0.86)",
+  fontSize: 14,
+  display: "flex",
+  flexDirection: "column",
+  gap: 8,
+};
+
+const linkStyle: React.CSSProperties = {
+  color: "#54bde8",
+  textDecoration: "none",
   fontWeight: 700,
-  cursor: "pointer",
-});
+};
 
 export default WebAuth;

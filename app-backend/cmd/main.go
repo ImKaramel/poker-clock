@@ -67,6 +67,7 @@ func main() {
 	prepo := postgres.NewParticipantRepo(pool)
 	srepo := postgres.NewSupportRepo(pool)
 	trepo := postgres.NewTournamentRepo(pool)
+	carepo := postgres.NewContactAuthRepo(pool)
 
 	adminIDsMap := make(map[string]bool)
 	for _, id := range cfg.AdminTelegramIDs {
@@ -79,6 +80,7 @@ func main() {
 		Participants:     prepo,
 		Tickets:          srepo,
 		Tournaments:      trepo,
+		ContactAuth:      carepo,
 		JWT:              jwtSvc,
 		Log:              log,
 		Clock:            clock,
@@ -90,14 +92,16 @@ func main() {
 		Log: log,
 		UC:  uc,
 
-		TelegramBotToken: cfg.TelegramBotToken,
-		FrontendURL:      cfg.FrontendURL,
+		TelegramBotToken:    cfg.TelegramBotToken,
+		TelegramBotUsername: cfg.TelegramBotUsername,
+		FrontendURL:         cfg.FrontendURL,
 	}
 	h.Repo.Users = urepo
 	h.Repo.Games = grepo
 	h.Repo.Participants = prepo
 	h.Repo.Tickets = srepo
 	h.Repo.Tournaments = trepo
+	h.Repo.ContactAuth = carepo
 
 	engine := gin.New()
 

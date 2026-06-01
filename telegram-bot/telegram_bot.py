@@ -5,7 +5,14 @@ from typing import Any
 
 import requests
 from dotenv import load_dotenv
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    Update,
+    WebAppInfo,
+)
 from telegram.error import BadRequest, Forbidden, RetryAfter, TelegramError, TimedOut
 from telegram.ext import (
     ApplicationBuilder,
@@ -26,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.midnight-club-app.ru/api")
+WEB_VERSION_URL = os.getenv("WEB_VERSION_URL", "https://midnight-club-app.ru")
 ADMIN_TELEGRAM_IDS = {
     value.strip()
     for value in os.getenv("ADMIN_TELEGRAM_IDS", "").split(",")
@@ -37,6 +45,7 @@ ADMIN_URL = "https://t.me/midnight_club_admin"
 LADIES_BONUS_TEXT = "Девушкам всегда — первый вход FREE! (Кроме FREEZEOUT)"
 LADIES_BONUS_CALLBACK = "ladies_bonus"
 AWAITING_BROADCAST_KEY = "awaiting_broadcast"
+CONTACT_AUTH_TOKEN_KEY = "contact_auth_token"
 BOT_TOKEN_HEADER = "X-Bot-Token"
 TELEGRAM_CONNECT_TIMEOUT = 20
 TELEGRAM_READ_TIMEOUT = 30
@@ -66,6 +75,19 @@ def broadcast_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(keyboard)
 
 
+def main_menu_markup() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        [
+            [
+                KeyboardButton("Поделиться номером", request_contact=True),
+                KeyboardButton("Веб-версия", web_app=WebAppInfo(url=WEB_VERSION_URL)),
+            ],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=False,
+    )
+
+
 def fetch_recipients() -> list[dict[str, Any]]:
     response = requests.get(
         f"{API_BASE_URL}/bot/recipients",
@@ -80,6 +102,16 @@ def fetch_recipients() -> list[dict[str, Any]]:
     return users
 
 
+def save_contact(payload: dict[str, Any]) -> None:
+    response = requests.post(
+        f"{API_BASE_URL}/bot/contact",
+        headers={BOT_TOKEN_HEADER: BOT_TOKEN},
+        json=payload,
+        timeout=20,
+    )
+    response.raise_for_status()
+
+
 def parse_broadcast_text(args: list[str]) -> str:
     return " ".join(args).strip()
 
@@ -87,7 +119,7 @@ def parse_broadcast_text(args: list[str]) -> str:
 async def safe_reply_text(
     update: Update,
     text: str,
-    reply_markup: InlineKeyboardMarkup | None = None,
+    reply_markup: InlineKeyboardMarkup | ReplyKeyboardMarkup | None = None,
 ):
     message = update.effective_message
     if message is None:
@@ -156,6 +188,22 @@ async def ensure_admin(update: Update) -> bool:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    start_payload = context.args[0] if context.args else ""
+    if start_payload.startswith("contact_"):
+        context.user_data[CONTACT_AUTH_TOKEN_KEY] = start_payload.removeprefix("contact_")
+        await safe_reply_text(
+            update,
+            "\n".join(
+                [
+                    f"👋 {user.first_name or 'Игрок'}, подтвердим вход в веб-версию.",
+                    "",
+                    "Нажмите кнопку «Поделиться номером» ниже. После этого вернитесь на сайт, вход завершится автоматически.",
+                ]
+            ),
+            reply_markup=main_menu_markup(),
+        )
+        return
+
     lines = [
         f"👋 Добро пожаловать в Midnight Club, {user.first_name or 'игрок'}!",
         "",
@@ -173,7 +221,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             ]
         )
 
-    await safe_reply_text(update, "\n".join(lines))
+    await safe_reply_text(update, "\n".join(lines), reply_markup=main_menu_markup())
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -194,6 +242,39 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             ]
         )
     await safe_reply_text(update, "\n".join(help_lines))
+
+
+async def contact_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    user = update.effective_user
+    contact = message.contact if message else None
+    if contact is None or user is None:
+        return
+
+    if contact.user_id and contact.user_id != user.id:
+        await safe_reply_text(update, "Пожалуйста, поделитесь своим номером с этой кнопки.")
+        return
+
+    payload = {
+        "user_id": str(user.id),
+        "username": user.username or "",
+        "first_name": user.first_name or "",
+        "last_name": user.last_name or "",
+        "phone_number": contact.phone_number,
+        "challenge_token": context.user_data.get(CONTACT_AUTH_TOKEN_KEY, ""),
+    }
+    try:
+        await asyncio.to_thread(save_contact, payload)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("failed to save contact")
+        await safe_reply_text(update, f"Не удалось сохранить номер: {exc}")
+        return
+
+    if context.user_data.pop(CONTACT_AUTH_TOKEN_KEY, None):
+        await safe_reply_text(update, "Номер подтверждён. Вернитесь в веб-версию, вход завершится автоматически.", reply_markup=main_menu_markup())
+        return
+
+    await safe_reply_text(update, "Номер сохранён. Теперь мы сможем восстановить доступ через SMS.", reply_markup=main_menu_markup())
 
 
 async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -350,6 +431,7 @@ def main() -> None:
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     app.add_handler(CommandHandler("cancel_broadcast", cancel_broadcast))
     app.add_handler(CallbackQueryHandler(ladies_bonus_callback, pattern=f"^{LADIES_BONUS_CALLBACK}$"))
+    app.add_handler(MessageHandler(filters.CONTACT, contact_message))
     app.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,

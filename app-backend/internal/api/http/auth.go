@@ -1,12 +1,8 @@
 package httpapi
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -21,8 +17,7 @@ import (
 const authGenericError = "неверные данные"
 
 var passwordAuthLimiter = newAuthLimiter(5, 10*time.Minute)
-
-const telegramVerificationMessage = "Код подтверждения для установки пароля в Midnight Club: %s\n\nЕсли это были не вы, просто проигнорируйте сообщение."
+var contactAuthLimiter = newAuthLimiter(10, 10*time.Minute)
 
 type authLimiter struct {
 	mu       sync.Mutex
@@ -79,61 +74,79 @@ func authLimitKey(c *gin.Context, username string) string {
 	return ip + ":" + strings.ToLower(strings.TrimSpace(strings.TrimPrefix(username, "@")))
 }
 
-func (h *Handlers) sendTelegramMessage(ctx context.Context, chatID string, text string) error {
-	if h.TelegramBotToken == "" {
-		return errors.New("telegram bot token is empty")
-	}
+func contactAuthLimitKey(c *gin.Context) string {
+	return c.ClientIP() + ":contact-auth"
+}
 
-	payload := map[string]any{
-		"chat_id": chatID,
-		"text":    text,
+func (h *Handlers) contactAuthBotLink(token string) string {
+	username := strings.TrimSpace(strings.TrimPrefix(h.TelegramBotUsername, "@"))
+	if username == "" {
+		username = "Midnight_poker_bot"
 	}
+	return fmt.Sprintf("https://t.me/%s?start=contact_%s", url.QueryEscape(username), url.QueryEscape(token))
+}
 
-	body, err := json.Marshal(payload)
+func (h *Handlers) ContactAuthStart(c *gin.Context) {
+	key := contactAuthLimitKey(c)
+	if !contactAuthLimiter.allow(key) {
+		c.JSON(http.StatusTooManyRequests, gin.H{"error": "слишком много попыток, попробуйте позже"})
+		return
+	}
+	contactAuthLimiter.fail(key)
+
+	challenge, err := h.UC.CreateContactAuthChallenge(c.Request.Context())
 	if err != nil {
-		return err
+		h.Log.Error("contact auth start failed", "err", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start contact auth"})
+		return
 	}
 
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		"https://api.telegram.org/bot"+h.TelegramBotToken+"/sendMessage",
-		bytes.NewReader(body),
-	)
+	c.JSON(http.StatusCreated, gin.H{
+		"token":      challenge.Token,
+		"status":     challenge.Status,
+		"bot_link":   h.contactAuthBotLink(challenge.Token),
+		"expires_at": challenge.ExpiresAt.UTC().Format(time.RFC3339),
+	})
+}
+
+func (h *Handlers) ContactAuthStatus(c *gin.Context) {
+	token := strings.TrimSpace(c.Query("token"))
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "token required"})
+		return
+	}
+
+	jwtToken, u, err := h.UC.ConsumeContactAuthChallenge(c.Request.Context(), token)
 	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-	if resp.StatusCode >= http.StatusBadRequest {
-		return fmt.Errorf("telegram send failed: %s", strings.TrimSpace(string(respBody)))
-	}
-
-	var apiResp struct {
-		OK          bool   `json:"ok"`
-		Description string `json:"description"`
-	}
-	if err := json.Unmarshal(respBody, &apiResp); err == nil && !apiResp.OK {
-		if apiResp.Description == "" {
-			apiResp.Description = "unknown telegram error"
+		switch {
+		case errors.Is(err, usecase.ErrContactAuthPending):
+			c.JSON(http.StatusOK, gin.H{"status": "pending"})
+		case errors.Is(err, usecase.ErrContactAuthExpired):
+			c.JSON(http.StatusGone, gin.H{"status": "expired", "error": "contact auth expired"})
+		case errors.Is(err, usecase.ErrContactAuthConsumed):
+			c.JSON(http.StatusConflict, gin.H{"status": "consumed", "error": "contact auth already used"})
+		case errors.Is(err, usecase.ErrNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		default:
+			h.Log.Error("contact auth status failed", "err", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check contact auth"})
 		}
-		return errors.New(apiResp.Description)
+		return
 	}
 
-	return nil
+	contactAuthLimiter.success(contactAuthLimitKey(c))
+	c.JSON(http.StatusOK, gin.H{
+		"status": "completed",
+		"token":  jwtToken,
+		"user":   userToMap(u),
+		"isNew":  false,
+	})
 }
 
 func (h *Handlers) TelegramAuth(c *gin.Context) {
 	var body struct {
-		User map[string]any `json:"user"`
+		InitData      string `json:"init_data"`
+		InitDataCamel string `json:"initData"`
 	}
 
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -148,28 +161,40 @@ func (h *Handlers) TelegramAuth(c *gin.Context) {
 		return
 	}
 
-	if body.User == nil {
-		h.Log.Error("USER IS NULL")
+	initData := strings.TrimSpace(body.InitData)
+	if initData == "" {
+		initData = strings.TrimSpace(body.InitDataCamel)
+	}
+
+	if initData == "" {
+		h.Log.Error("TELEGRAM INIT DATA IS EMPTY")
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "user is null",
+			"error": "telegram init data is required",
 		})
 		return
 	}
 
-	h.Log.Info("TELEGRAM AUTH REQUEST OK",
-		"user", body.User,
-	)
+	if h.TelegramBotToken == "" {
+		h.Log.Error("telegram bot token is empty")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server configuration error"})
+		return
+	}
 
-	token, u, isNew, err := h.UC.TelegramAuthUnsafe(c.Request.Context(), body.User)
+	h.Log.Info("TELEGRAM INIT DATA AUTH REQUEST OK")
+
+	token, u, isNew, err := h.UC.TelegramAuthInitData(c.Request.Context(), initData, h.TelegramBotToken)
 	if err != nil {
 		h.Log.Error("❌ AUTH FAILED", "err", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		status := http.StatusUnauthorized
+		if errors.Is(err, usecase.ErrInvalidTelegramAuth) {
+			status = http.StatusUnauthorized
+		}
+		c.JSON(status, gin.H{"error": "invalid telegram auth data"})
 		return
 	}
 	h.Log.Info("isNew TELEGRAM AUTH REQUEST OK",
-		"user", body.User,
 		"isNew", isNew,
-		"token", token,
+		"user_id", u.UserID,
 	)
 
 	c.JSON(http.StatusOK, gin.H{
@@ -202,42 +227,25 @@ func (h *Handlers) RegisterPassword(c *gin.Context) {
 		return
 	}
 
-	authenticatedUserID, _ := infraauth.UserIDFromContext(c)
 	result, err := h.UC.RegisterPasswordUser(
 		c.Request.Context(),
 		body.TelegramUsername,
 		body.Nickname,
 		body.Password,
-		authenticatedUserID,
 	)
 	if err != nil {
 		passwordAuthLimiter.fail(key)
 		status := http.StatusBadRequest
-		if errors.Is(err, usecase.ErrUserAlreadyExists) || errors.Is(err, usecase.ErrAccountMismatch) || errors.Is(err, usecase.ErrPasswordLinked) {
+		message := authGenericError
+		switch {
+		case errors.Is(err, usecase.ErrUserAlreadyExists):
 			status = http.StatusConflict
+			message = "username уже занят"
+		case errors.Is(err, usecase.ErrNicknameTaken):
+			status = http.StatusConflict
+			message = "nickname уже занят"
 		}
-		c.JSON(status, gin.H{"error": authGenericError})
-		return
-	}
-
-	if result.RequiresVerification && result.VerificationChallenge != nil {
-		if err := h.sendTelegramMessage(
-			c.Request.Context(),
-			result.VerificationChallenge.TelegramUserID,
-			fmt.Sprintf(telegramVerificationMessage, result.VerificationChallenge.Code),
-		); err != nil {
-			passwordAuthLimiter.fail(key)
-			h.Log.Error("telegram verification send failed", "err", err)
-			c.JSON(http.StatusBadGateway, gin.H{
-				"error": "не удалось отправить код в Telegram. Откройте бота и нажмите /start, затем повторите попытку",
-			})
-			return
-		}
-
-		c.JSON(http.StatusAccepted, gin.H{
-			"requires_verification": true,
-			"message":               "Мы отправили код подтверждения в Telegram",
-		})
+		c.JSON(status, gin.H{"error": message})
 		return
 	}
 
@@ -246,39 +254,6 @@ func (h *Handlers) RegisterPassword(c *gin.Context) {
 		"token": result.Token,
 		"user":  userToMap(result.User),
 		"isNew": true,
-	})
-}
-
-func (h *Handlers) VerifyRegisterPasswordCode(c *gin.Context) {
-	var body struct {
-		TelegramUsername string `json:"telegram_username"`
-		Code             string `json:"code"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": authGenericError})
-		return
-	}
-
-	token, u, err := h.UC.VerifyPasswordRegistrationCode(c.Request.Context(), body.TelegramUsername, body.Code)
-	if err != nil {
-		status := http.StatusBadRequest
-		message := authGenericError
-		if errors.Is(err, usecase.ErrVerificationCode) {
-			status = http.StatusUnauthorized
-			message = "неверный или устаревший код"
-		}
-		if errors.Is(err, usecase.ErrPasswordLinked) {
-			status = http.StatusConflict
-		}
-		c.JSON(status, gin.H{"error": message})
-		return
-	}
-
-	passwordAuthLimiter.success(authLimitKey(c, body.TelegramUsername))
-	c.JSON(http.StatusOK, gin.H{
-		"token": token,
-		"user":  userToMap(u),
-		"isNew": false,
 	})
 }
 
@@ -385,11 +360,11 @@ func (h *Handlers) TelegramWebAuthCallback(c *gin.Context) {
 		"is_new", isNew,
 	)
 
-	redirectURL := fmt.Sprintf(
-		"https://www.midnight-club-app.ru/web-auth?token=%s",
-		//h.FrontendURL,
-		url.QueryEscape(token),
-	)
+	frontendURL := strings.TrimRight(h.FrontendURL, "/")
+	if frontendURL == "" {
+		frontendURL = "https://midnight-club-app.ru"
+	}
+	redirectURL := fmt.Sprintf("%s/web-auth?token=%s", frontendURL, url.QueryEscape(token))
 
 	h.Log.Info("➡️ Redirecting to",
 		"url", redirectURL,

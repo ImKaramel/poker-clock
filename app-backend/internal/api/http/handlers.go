@@ -3,6 +3,7 @@ package httpapi
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,16 +14,18 @@ import (
 )
 
 type Handlers struct {
-	Log              *slog.Logger
-	UC               *usecase.Service
-	TelegramBotToken string
-	FrontendURL      string
-	Repo             struct {
+	Log                 *slog.Logger
+	UC                  *usecase.Service
+	TelegramBotToken    string
+	TelegramBotUsername string
+	FrontendURL         string
+	Repo                struct {
 		Users        repository.UserRepository
 		Games        repository.GameRepository
 		Participants repository.ParticipantRepository
 		Tickets      repository.SupportTicketRepository
 		Tournaments  repository.TournamentRepository
+		ContactAuth  repository.ContactAuthRepository
 	}
 }
 
@@ -35,6 +38,29 @@ func derefStrPtr(p *string) string {
 		return ""
 	}
 	return *p
+}
+
+func normalizePhoneNumber(raw string) (string, bool) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return "", false
+	}
+	var b strings.Builder
+	for i, r := range trimmed {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+			continue
+		}
+		if r == '+' && i == 0 {
+			b.WriteRune(r)
+		}
+	}
+	phone := b.String()
+	digits := strings.TrimPrefix(phone, "+")
+	if len(digits) < 10 || len(digits) > 15 {
+		return "", false
+	}
+	return phone, true
 }
 
 type userCreateBody struct {

@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -340,6 +341,38 @@ func (h *Handlers) GameRemoveParticipantAdmin(c *gin.Context) {
 
 type completeBody struct {
 	Participants []usecase.CompleteParticipantInput `json:"participants"`
+	Results      []usecase.CompleteResultInput      `json:"results"`
+}
+
+func (h *Handlers) GameCompletePreview(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	var body completeBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	preview, err := h.UC.PreviewCompleteGame(c.Request.Context(), id, usecase.CompleteGameInput{
+		Participants: body.Participants,
+		Results:      body.Results,
+	})
+	if err != nil {
+		if errors.Is(err, usecase.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		if errors.Is(err, usecase.ErrTournamentResultsRequired) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "results required"})
+			return
+		}
+		h.Log.Error("complete game preview", "err", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, preview)
 }
 
 func (h *Handlers) GameComplete(c *gin.Context) {
@@ -353,10 +386,25 @@ func (h *Handlers) GameComplete(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	th, err := h.UC.CompleteGame(c.Request.Context(), id, body.Participants)
+	th, err := h.UC.CompleteGame(c.Request.Context(), id, usecase.CompleteGameInput{
+		Participants: body.Participants,
+		Results:      body.Results,
+	})
 	if err != nil {
-		if err == usecase.ErrNotFound {
+		if errors.Is(err, usecase.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		if errors.Is(err, usecase.ErrTournamentResultsRequired) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "results required"})
+			return
+		}
+		var conflict *usecase.TournamentResultConflictError
+		if errors.As(err, &conflict) {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":   "unresolved tournament results",
+				"preview": conflict.Preview,
+			})
 			return
 		}
 		h.Log.Error("complete game", "err", err)

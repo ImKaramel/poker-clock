@@ -27,13 +27,9 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const requestUrl = String(error.config?.url || '');
-    const isPasswordAuthRequest =
-      requestUrl.includes('/auth/login') ||
-      requestUrl.includes('/auth/register') ||
-      requestUrl.includes('/auth/register/verify-code') ||
-      requestUrl.includes('/auth/link-password');
+    const isAuthRequest = requestUrl.includes('/auth/telegram');
 
-    if (status === 401 && !isPasswordAuthRequest) {
+    if (status === 401 && !isAuthRequest) {
       localStorage.removeItem('auth_token');
       return Promise.reject(error);
     }
@@ -65,25 +61,14 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
-  telegramInitAuth: (user: any) => {
-    return api.post("/auth/telegram", user);
+  telegramInitAuth: (initData: string) => {
+    return api.post("/auth/telegram", { init_data: initData });
   },
-  login: (data: { telegram_username: string; password: string }) => {
-    return api.post("/auth/login", data);
+  startContactAuth: () => {
+    return api.post("/auth/contact/start");
   },
-  register: (data: {
-    telegram_username: string;
-    nickname: string;
-    password: string;
-    confirm_password: string;
-  }) => {
-    return api.post("/auth/register", data);
-  },
-  verifyRegisterCode: (data: { telegram_username: string; code: string }) => {
-    return api.post("/auth/register/verify-code", data);
-  },
-  linkPassword: (data: { password: string; confirm_password: string }) => {
-    return api.post("/auth/link-password", data);
+  pollContactAuth: (token: string) => {
+    return api.get("/auth/contact/status", { params: { token } });
   },
 };
 export const adminAPI = {
@@ -115,13 +100,13 @@ export const ratingAPI = {
 
 export const profileAPI = {
   getProfile: () => api.get('/profile'),
-  updateProfile: async (nick_name: string) => {
+  updateProfile: async (data: { nick_name?: string; phone_number?: string }) => {
     try {
-      return await api.patch('/profile', { nick_name });
+      return await api.patch('/profile', data);
     } catch (error: any) {
       const status = error?.response?.status;
       if (status === 404 || status === 405) {
-        return api.patch('/profile/', { nick_name });
+        return api.patch('/profile/', data);
       }
       throw error;
     }

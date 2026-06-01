@@ -63,7 +63,7 @@ func MiddlewareJWT(j *JWTService, log *slog.Logger) gin.HandlerFunc {
 		)
 
 		c.Set(ctxUserID, claims.UserID)
-		c.Set(ctxIsAdmin, true)
+		c.Set(ctxIsAdmin, claims.IsAdmin)
 		c.Next()
 	}
 }
@@ -89,7 +89,7 @@ func MiddlewareJWTOptional(j *JWTService, log *slog.Logger) gin.HandlerFunc {
 			return
 		}
 		c.Set(ctxUserID, claims.UserID)
-		c.Set(ctxIsAdmin, true)
+		c.Set(ctxIsAdmin, claims.IsAdmin)
 		c.Next()
 	}
 }

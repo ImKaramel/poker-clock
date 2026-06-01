@@ -4,9 +4,11 @@ export interface ProfileType {
   user: {
     created_at: string,
     first_name: string,
+    has_password?: boolean,
     is_admin: boolean,
     is_banned: boolean,
     nick_name?: string
+    phone_number?: string,
     points: number,
     total_games_played: number,
     user_id: string,
@@ -71,6 +73,7 @@ export interface RatingType {
   user: {
     created_at: string,
     first_name: string,
+    has_password?: boolean,
     is_admin: boolean,
     is_banned: boolean,
     points: number,
@@ -79,6 +82,7 @@ export interface RatingType {
     username: string
     photo_url: string
     nick_name?: string
+    phone_number?: string
   }
 }
 export interface GameParticipant {

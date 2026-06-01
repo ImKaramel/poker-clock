@@ -91,6 +91,21 @@ func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*domain.
 	return u, err
 }
 
+func (r *UserRepo) GetByNickname(ctx context.Context, nickname string) (*domain.User, error) {
+	row := r.pool.QueryRow(ctx, `
+		SELECT user_id, password, last_login, is_superuser, username, nick_name, first_name, last_name,
+			phone_number, email, date_of_birth, points, total_games_played, is_admin, is_staff, is_active, is_banned,
+			created_at, updated_at, photo_url
+		FROM users
+		WHERE LOWER(nick_name) = LOWER($1)
+		ORDER BY created_at`, nickname)
+	u, err := scanUser(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	return u, err
+}
+
 func (r *UserRepo) ListByUsername(ctx context.Context, username string) ([]domain.User, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT user_id, password, last_login, is_superuser, username, nick_name, first_name, last_name,

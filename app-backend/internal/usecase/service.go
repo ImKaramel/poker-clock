@@ -3,8 +3,11 @@ package usecase
 import (
 	"context"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -23,6 +26,15 @@ import (
 
 var ErrNotFound = errors.New("not found")
 var ErrForbidden = errors.New("forbidden")
+var ErrInvalidTelegramAuth = errors.New("invalid telegram auth data")
+var ErrTournamentResultsRequired = errors.New("tournament results required")
+var ErrTournamentResultsUnresolved = errors.New("tournament results unresolved")
+var ErrContactAuthPending = errors.New("contact auth pending")
+var ErrContactAuthExpired = errors.New("contact auth expired")
+var ErrContactAuthConsumed = errors.New("contact auth consumed")
+
+const telegramInitDataMaxAge = 24 * time.Hour
+const contactAuthTTL = 10 * time.Minute
 
 type Service struct {
 	Users            repository.UserRepository
@@ -30,6 +42,7 @@ type Service struct {
 	Participants     repository.ParticipantRepository
 	Tickets          repository.SupportTicketRepository
 	Tournaments      repository.TournamentRepository
+	ContactAuth      repository.ContactAuthRepository
 	JWT              *auth.JWTService
 	Log              *slog.Logger
 	Clock            *services.Clock
@@ -42,6 +55,81 @@ type Storage interface {
 	UploadTournamentPhoto(ctx context.Context, data []byte) (string, error)
 }
 
+type telegramInitDataUser struct {
+	ID        int64  `json:"id"`
+	Username  string `json:"username"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	PhotoURL  string `json:"photo_url"`
+}
+
+func validateTelegramInitData(rawInitData string, botToken string, now time.Time) (*telegramInitDataUser, error) {
+	values, err := url.ParseQuery(rawInitData)
+	if err != nil {
+		return nil, fmt.Errorf("%w: parse init data: %v", ErrInvalidTelegramAuth, err)
+	}
+
+	telegramHash := values.Get("hash")
+	if telegramHash == "" {
+		return nil, fmt.Errorf("%w: hash is empty", ErrInvalidTelegramAuth)
+	}
+
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		if key == "hash" {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	checkParts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		checkParts = append(checkParts, fmt.Sprintf("%s=%s", key, values.Get(key)))
+	}
+	dataCheckString := strings.Join(checkParts, "\n")
+
+	secretHMAC := hmac.New(sha256.New, []byte("WebAppData"))
+	secretHMAC.Write([]byte(botToken))
+	secretKey := secretHMAC.Sum(nil)
+
+	hashHMAC := hmac.New(sha256.New, secretKey)
+	hashHMAC.Write([]byte(dataCheckString))
+	calculatedHash := hex.EncodeToString(hashHMAC.Sum(nil))
+
+	if !hmac.Equal([]byte(calculatedHash), []byte(telegramHash)) {
+		return nil, fmt.Errorf("%w: invalid hash", ErrInvalidTelegramAuth)
+	}
+
+	authDateRaw := values.Get("auth_date")
+	authDateUnix, err := strconv.ParseInt(authDateRaw, 10, 64)
+	if err != nil || authDateUnix <= 0 {
+		return nil, fmt.Errorf("%w: invalid auth_date", ErrInvalidTelegramAuth)
+	}
+	authDate := time.Unix(authDateUnix, 0)
+	if now.Sub(authDate) > telegramInitDataMaxAge {
+		return nil, fmt.Errorf("%w: init data expired", ErrInvalidTelegramAuth)
+	}
+	if authDate.After(now.Add(5 * time.Minute)) {
+		return nil, fmt.Errorf("%w: init data from future", ErrInvalidTelegramAuth)
+	}
+
+	userRaw := values.Get("user")
+	if userRaw == "" {
+		return nil, fmt.Errorf("%w: user is empty", ErrInvalidTelegramAuth)
+	}
+
+	var user telegramInitDataUser
+	if err := json.Unmarshal([]byte(userRaw), &user); err != nil {
+		return nil, fmt.Errorf("%w: parse user: %v", ErrInvalidTelegramAuth, err)
+	}
+	if user.ID <= 0 {
+		return nil, fmt.Errorf("%w: user id is empty", ErrInvalidTelegramAuth)
+	}
+
+	return &user, nil
+}
+
 func (s *Service) issueToken(u *domain.User) (string, error) {
 	isAdmin := s.AdminTelegramIDs[u.UserID]
 
@@ -51,6 +139,111 @@ func (s *Service) issueToken(u *domain.User) (string, error) {
 	)
 
 	return s.JWT.Issue(u.UserID, isAdmin)
+}
+
+func generateContactAuthToken() (string, error) {
+	var b [32]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b[:]), nil
+}
+
+func (s *Service) CreateContactAuthChallenge(ctx context.Context) (*domain.ContactAuthChallenge, error) {
+	if s.ContactAuth == nil {
+		return nil, errors.New("contact auth repository is not configured")
+	}
+
+	token, err := generateContactAuthToken()
+	if err != nil {
+		return nil, err
+	}
+
+	challenge := &domain.ContactAuthChallenge{
+		Token:     token,
+		Status:    "pending",
+		ExpiresAt: time.Now().Add(contactAuthTTL),
+	}
+	if err := s.ContactAuth.Create(ctx, challenge); err != nil {
+		return nil, err
+	}
+	return challenge, nil
+}
+
+func (s *Service) ConfirmContactAuthChallenge(
+	ctx context.Context,
+	token string,
+	telegramUserID string,
+	phoneNumber string,
+) error {
+	if s.ContactAuth == nil {
+		return errors.New("contact auth repository is not configured")
+	}
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return ErrNotFound
+	}
+	return s.ContactAuth.Complete(ctx, token, telegramUserID, phoneNumber)
+}
+
+func (s *Service) ConsumeContactAuthChallenge(ctx context.Context, token string) (string, *domain.User, error) {
+	if s.ContactAuth == nil {
+		return "", nil, errors.New("contact auth repository is not configured")
+	}
+
+	challenge, err := s.ContactAuth.GetByToken(ctx, strings.TrimSpace(token))
+	if err != nil {
+		return "", nil, err
+	}
+	if challenge == nil {
+		return "", nil, ErrNotFound
+	}
+	if challenge.ConsumedAt != nil || challenge.Status == "consumed" {
+		return "", nil, ErrContactAuthConsumed
+	}
+	if time.Now().After(challenge.ExpiresAt) {
+		return "", nil, ErrContactAuthExpired
+	}
+	if challenge.Status != "completed" || challenge.TelegramUserID == nil || *challenge.TelegramUserID == "" {
+		return "", nil, ErrContactAuthPending
+	}
+
+	u, err := s.Users.GetByID(ctx, *challenge.TelegramUserID)
+	if err != nil {
+		return "", nil, err
+	}
+	if u == nil {
+		return "", nil, ErrNotFound
+	}
+
+	tokenJWT, err := s.issueToken(u)
+	if err != nil {
+		return "", nil, err
+	}
+	if err := s.ContactAuth.Consume(ctx, challenge.Token); err != nil {
+		return "", nil, err
+	}
+	return tokenJWT, u, nil
+}
+
+func (s *Service) TelegramAuthInitData(
+	ctx context.Context,
+	initData string,
+	botToken string,
+) (token string, dbUser *domain.User, isNew bool, err error) {
+	user, err := validateTelegramInitData(initData, botToken, time.Now())
+	if err != nil {
+		s.Log.Error("TELEGRAM INIT DATA VALIDATION FAILED", "err", err)
+		return "", nil, false, err
+	}
+
+	return s.TelegramAuthUnsafe(ctx, map[string]any{
+		"id":         strconv.FormatInt(user.ID, 10),
+		"username":   user.Username,
+		"first_name": user.FirstName,
+		"last_name":  user.LastName,
+		"photo_url":  user.PhotoURL,
+	})
 }
 
 func (s *Service) TelegramAuthUnsafe(
@@ -223,6 +416,277 @@ type CompleteParticipantInput struct {
 	PaymentMethod *string `json:"payment_method"`
 }
 
+type CompleteResultInput struct {
+	Position  int    `json:"position"`
+	Nickname  string `json:"nickname"`
+	UserID    string `json:"user_id"`
+	KOCount   int    `json:"ko_count"`
+	Knockouts int    `json:"knockouts"`
+	Bonus     int    `json:"bonus"`
+}
+
+type CompleteGameInput struct {
+	Participants []CompleteParticipantInput `json:"participants"`
+	Results      []CompleteResultInput      `json:"results"`
+}
+
+type TournamentResultUser struct {
+	UserID    string  `json:"user_id"`
+	Username  string  `json:"username"`
+	NickName  *string `json:"nick_name,omitempty"`
+	FirstName *string `json:"first_name,omitempty"`
+	LastName  *string `json:"last_name,omitempty"`
+}
+
+type TournamentResultPreviewRow struct {
+	Position    int                    `json:"position"`
+	Nickname    string                 `json:"nickname"`
+	KOCount     int                    `json:"ko_count"`
+	BasePoints  int                    `json:"base_points"`
+	KOPoints    int                    `json:"ko_points"`
+	Bonus       int                    `json:"bonus"`
+	TotalPoints int                    `json:"total_points"`
+	Status      string                 `json:"status"`
+	User        *TournamentResultUser  `json:"user,omitempty"`
+	Candidates  []TournamentResultUser `json:"candidates,omitempty"`
+}
+
+type CompleteGamePreview struct {
+	PlayersCount int                          `json:"players_count"`
+	KOValue      int                          `json:"ko_value"`
+	Results      []TournamentResultPreviewRow `json:"results"`
+	Unresolved   []TournamentResultPreviewRow `json:"unresolved"`
+}
+
+type TournamentResultConflictError struct {
+	Preview *CompleteGamePreview
+}
+
+func (e *TournamentResultConflictError) Error() string {
+	return ErrTournamentResultsUnresolved.Error()
+}
+
+const koRatingBonus = 100
+
+var baselineRatingPoints = []float64{
+	3100.00,
+	2738.43,
+	2233.03,
+	2108.00,
+	1983.11,
+	1612.00,
+	1378.38,
+	1351.35,
+	1240.00,
+	1219.51,
+	1161.17,
+	1116.00,
+	1013.51,
+	992.00,
+	927.89,
+	878.05,
+	868.00,
+	829.27,
+	829.27,
+	784.62,
+	744.00,
+	702.70,
+	664.54,
+	634.15,
+	634.15,
+	620.00,
+	527.03,
+	496.00,
+	487.80,
+	487.80,
+	486.49,
+	461.54,
+	439.02,
+	439.02,
+	405.41,
+	405.41,
+	390.24,
+	390.24,
+	372.00,
+	364.86,
+	124.00,
+	124.00,
+	124.00,
+	124.00,
+	124.00,
+	124.00,
+	124.00,
+	124.00,
+	124.00,
+	124.00,
+	124.00,
+	124.00,
+	124.00,
+	124.00,
+	124.00,
+}
+
+func scaledPlacePoints(playersCount int, position int) int {
+	if playersCount <= 0 || position <= 0 {
+		return 0
+	}
+	baseIndex := position - 1
+	base := baselineRatingPoints[len(baselineRatingPoints)-1]
+	if baseIndex < len(baselineRatingPoints) {
+		base = baselineRatingPoints[baseIndex]
+	}
+	return int(math.Round(base * float64(playersCount) / 55.0))
+}
+
+func normalizeTournamentName(value string) string {
+	value = strings.TrimSpace(strings.TrimPrefix(value, "@"))
+	value = strings.ToLower(value)
+	return strings.Join(strings.Fields(value), " ")
+}
+
+func tournamentResultUserFromDomain(u *domain.User) TournamentResultUser {
+	return TournamentResultUser{
+		UserID:    u.UserID,
+		Username:  u.Username,
+		NickName:  u.NickName,
+		FirstName: u.FirstName,
+		LastName:  u.LastName,
+	}
+}
+
+func userTournamentNames(u domain.User) []string {
+	names := []string{u.UserID, u.Username}
+	if u.NickName != nil {
+		names = append(names, *u.NickName)
+	}
+	if u.FirstName != nil {
+		names = append(names, *u.FirstName)
+	}
+	if u.FirstName != nil && u.LastName != nil {
+		names = append(names, strings.TrimSpace(*u.FirstName+" "+*u.LastName))
+	}
+	return names
+}
+
+func (s *Service) resolveTournamentResultUser(
+	users []domain.User,
+	row CompleteResultInput,
+) (*TournamentResultUser, []TournamentResultUser) {
+	if row.UserID != "" {
+		for i := range users {
+			if users[i].UserID == row.UserID {
+				user := tournamentResultUserFromDomain(&users[i])
+				return &user, nil
+			}
+		}
+		return nil, nil
+	}
+
+	target := normalizeTournamentName(row.Nickname)
+	if target == "" {
+		return nil, nil
+	}
+
+	matches := make([]TournamentResultUser, 0, 2)
+	for i := range users {
+		for _, name := range userTournamentNames(users[i]) {
+			if normalizeTournamentName(name) == target {
+				matches = append(matches, tournamentResultUserFromDomain(&users[i]))
+				break
+			}
+		}
+	}
+
+	if len(matches) == 1 {
+		return &matches[0], nil
+	}
+	if len(matches) > 1 {
+		return nil, matches
+	}
+	return nil, nil
+}
+
+func (s *Service) PreviewCompleteGame(
+	ctx context.Context,
+	gameID int64,
+	input CompleteGameInput,
+) (*CompleteGamePreview, error) {
+	g, err := s.Games.GetByID(ctx, gameID)
+	if err != nil {
+		return nil, err
+	}
+	if g == nil {
+		return nil, ErrNotFound
+	}
+	return s.previewCompleteGame(ctx, input)
+}
+
+func (s *Service) previewCompleteGame(ctx context.Context, input CompleteGameInput) (*CompleteGamePreview, error) {
+	if len(input.Results) == 0 {
+		return nil, ErrTournamentResultsRequired
+	}
+
+	users, err := s.Users.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	playersCount := len(input.Results)
+	preview := &CompleteGamePreview{
+		PlayersCount: playersCount,
+		KOValue:      koRatingBonus,
+		Results:      make([]TournamentResultPreviewRow, 0, playersCount),
+		Unresolved:   []TournamentResultPreviewRow{},
+	}
+	seenUsers := make(map[string]bool)
+
+	for index, raw := range input.Results {
+		position := raw.Position
+		if position <= 0 {
+			position = index + 1
+		}
+		koCount := raw.KOCount
+		if koCount == 0 && raw.Knockouts > 0 {
+			koCount = raw.Knockouts
+		}
+		if koCount < 0 {
+			koCount = 0
+		}
+		basePoints := scaledPlacePoints(playersCount, position)
+		row := TournamentResultPreviewRow{
+			Position:    position,
+			Nickname:    strings.TrimSpace(raw.Nickname),
+			KOCount:     koCount,
+			BasePoints:  basePoints,
+			KOPoints:    koCount * koRatingBonus,
+			Bonus:       raw.Bonus,
+			TotalPoints: basePoints + koCount*koRatingBonus + raw.Bonus,
+			Status:      "unresolved",
+		}
+
+		user, candidates := s.resolveTournamentResultUser(users, raw)
+		switch {
+		case user != nil && seenUsers[user.UserID]:
+			row.User = user
+			row.Status = "duplicate"
+		case user != nil:
+			row.User = user
+			row.Status = "resolved"
+			seenUsers[user.UserID] = true
+		case len(candidates) > 0:
+			row.Candidates = candidates
+			row.Status = "ambiguous"
+		}
+
+		if row.Status != "resolved" {
+			preview.Unresolved = append(preview.Unresolved, row)
+		}
+		preview.Results = append(preview.Results, row)
+	}
+
+	return preview, nil
+}
+
 func reentryPrice(g *domain.Game) float64 {
 	if g.ReentryBuyin > 0 {
 		return g.ReentryBuyin
@@ -230,13 +694,24 @@ func reentryPrice(g *domain.Game) float64 {
 	return g.Buyin
 }
 
-func (s *Service) CompleteGame(ctx context.Context, gameID int64, parts []CompleteParticipantInput) (*domain.TournamentHistory, error) {
+func (s *Service) CompleteGame(ctx context.Context, gameID int64, input CompleteGameInput) (*domain.TournamentHistory, error) {
 	g, err := s.Games.GetByID(ctx, gameID)
 	if err != nil {
 		return nil, err
 	}
 	if g == nil {
 		return nil, ErrNotFound
+	}
+	if len(input.Results) == 0 {
+		return nil, ErrTournamentResultsRequired
+	}
+
+	preview, err := s.previewCompleteGame(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+	if len(preview.Unresolved) > 0 {
+		return nil, &TournamentResultConflictError{Preview: preview}
 	}
 
 	liveParts, err := s.Participants.ListByGame(ctx, gameID)
@@ -257,11 +732,9 @@ func (s *Service) CompleteGame(ctx context.Context, gameID int64, parts []Comple
 			Addons:  p.Addons,
 		}
 	}
-	for _, p := range parts {
-		existing, ok := completedByUser[p.UserID]
-		if !ok {
-			continue
-		}
+	for _, p := range input.Participants {
+		existing := completedByUser[p.UserID]
+		existing.UserID = p.UserID
 		if p.Entries > 0 {
 			existing.Entries = p.Entries
 		}
@@ -274,13 +747,6 @@ func (s *Service) CompleteGame(ctx context.Context, gameID int64, parts []Comple
 		existing.PaymentMethod = p.PaymentMethod
 		completedByUser[p.UserID] = existing
 	}
-	completedParts := make([]CompleteParticipantInput, 0, len(completedByUser))
-	for _, p := range completedByUser {
-		completedParts = append(completedParts, p)
-	}
-	sort.Slice(completedParts, func(i, j int) bool {
-		return completedParts[i].UserID < completedParts[j].UserID
-	})
 
 	re := reentryPrice(g)
 	buyinI := int(math.Round(g.Buyin))
@@ -304,14 +770,22 @@ func (s *Service) CompleteGame(ctx context.Context, gameID int64, parts []Comple
 		Location:          g.Location,
 		Buyin:             buyinI,
 		ReentryBuyin:      rePtr,
-		ParticipantsCount: len(completedParts),
+		ParticipantsCount: len(preview.Results),
 	}
 	if err := s.Tournaments.CreateHistory(ctx, h); err != nil {
 		return nil, err
 	}
 
 	totalRev := 0
-	for _, p := range completedParts {
+	for _, result := range preview.Results {
+		if result.User == nil {
+			return nil, &TournamentResultConflictError{Preview: preview}
+		}
+		p := completedByUser[result.User.UserID]
+		if p.UserID == "" {
+			p.UserID = result.User.UserID
+			p.Entries = 1
+		}
 		u, err := s.Users.GetByID(ctx, p.UserID)
 		if err != nil {
 			return nil, err
@@ -336,12 +810,20 @@ func (s *Service) CompleteGame(ctx context.Context, gameID int64, parts []Comple
 			Addons:              p.Addons,
 			TotalSpent:          spent,
 			PaymentMethod:       p.PaymentMethod,
+			Position:            &result.Position,
+			FinalPoints:         result.TotalPoints,
 		}
 		if live, ok := liveByUser[p.UserID]; ok {
-			tp.Position = live.Position
-			tp.FinalPoints = live.FinalPoints
+			if tp.Position == nil {
+				tp.Position = live.Position
+			}
 		}
 		if err := s.Tournaments.AddTournamentParticipant(ctx, tp); err != nil {
+			return nil, err
+		}
+		u.Points += result.TotalPoints
+		u.TotalGamesPlayed++
+		if err := s.Users.Update(ctx, u); err != nil {
 			return nil, err
 		}
 	}

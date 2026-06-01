@@ -13,7 +13,7 @@ export default function Welcome() {
     try {
       setLoading(true);
 
-      await profileAPI.updateProfile(nickname);
+      await profileAPI.updateProfile({ nick_name: nickname.trim() });
 
       navigate('/useragreement')
 

@@ -14,7 +14,11 @@ const shouldLoadTelegramSdk = () => {
     return false;
   }
 
-  return TELEGRAM_HOSTS.has(window.location.hostname.toLowerCase());
+  const launchParams = `${window.location.search}${window.location.hash}`;
+  return (
+    TELEGRAM_HOSTS.has(window.location.hostname.toLowerCase()) ||
+    launchParams.includes("tgWebAppData")
+  );
 };
 
 const loadTelegramSdk = async (): Promise<void> => {
@@ -57,6 +61,7 @@ const loadTelegramSdk = async (): Promise<void> => {
 export const useTelegram = () => {
   const [webApp, setWebApp] = useState<any>(null);
   const [user, setUser] = useState<any>(undefined);
+  const [initData, setInitData] = useState<string>("");
   const [isTelegram, setIsTelegram] = useState<boolean>(false);
   const [isReady, setIsReady] = useState(false);
 
@@ -87,31 +92,36 @@ export const useTelegram = () => {
       try {
         tg.ready();
         tg.expand();
+        tg.disableVerticalSwipes?.();
       } catch (error) {
         console.warn("Telegram WebApp init error:", error);
       }
 
-      const tgUser = tg.initDataUnsafe?.user;
-      if (tgUser?.id) {
-        setUser(tgUser);
-        setIsReady(true);
-        return;
-      }
-
-      // Fallback for slow WebView environments where initDataUnsafe may lag.
-      timeout = setTimeout(() => {
+      const waitForInitData = (attempt = 0) => {
         if (!isMounted) {
           return;
         }
 
-        const delayedUser = tg.initDataUnsafe?.user;
-        if (delayedUser?.id) {
-          setUser(delayedUser);
-        } else {
-          setUser(null);
+        const rawInitData = tg.initData || "";
+        const tgUser = tg.initDataUnsafe?.user;
+
+        if (rawInitData) {
+          setInitData(rawInitData);
+          setUser(tgUser || null);
+          setIsReady(true);
+          return;
         }
+
+        if (attempt < 30) {
+          timeout = setTimeout(() => waitForInitData(attempt + 1), 200);
+          return;
+        }
+
+        setUser(tgUser || null);
         setIsReady(true);
-      }, 1200);
+      };
+
+      waitForInitData();
     };
 
     init();
@@ -127,6 +137,7 @@ export const useTelegram = () => {
   return {
     webApp,
     user,
+    initData,
     isTelegram,
     isReady,
   };

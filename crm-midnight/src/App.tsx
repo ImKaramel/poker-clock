@@ -58,6 +58,17 @@ const checkTokenValidity = (token: string | null): boolean => {
   }
 };
 
+const getTokenSubject = (token: string | null): string | null => {
+  if (!token) return null;
+
+  try {
+    const payload = decodeJwtPayload(token);
+    return String(payload.sub || payload.uid || "");
+  } catch {
+    return null;
+  }
+};
+
 const Loader = styled.div`
   display: flex;
   flex-direction: column;
@@ -71,7 +82,7 @@ const Loader = styled.div`
 `;
 
 const App: React.FC = () => {
-  const { user, isTelegram, isReady } = useTelegram();
+  const { user, initData, isTelegram, isReady } = useTelegram();
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoadingAuthCheck, setIsLoadingAuthCheck] = useState<boolean>(true);
@@ -107,9 +118,22 @@ const App: React.FC = () => {
       return;
     }
 
-    if (!user?.id) {
-      setAuthError("Не удалось получить данные пользователя из Telegram.");
+    if (!initData) {
+      setAuthError("Не удалось получить защищённые данные Telegram. Откройте приложение из Telegram ещё раз.");
       setIsAuthenticated(false);
+      setIsLoadingAuthCheck(false);
+      return;
+    }
+
+    const existingToken = localStorage.getItem("auth_token");
+    const existingSubject = getTokenSubject(existingToken);
+    if (
+      checkTokenValidity(existingToken) &&
+      user?.id &&
+      existingSubject === String(user.id)
+    ) {
+      setAuthError(null);
+      setIsAuthenticated(true);
       setIsLoadingAuthCheck(false);
       return;
     }
@@ -121,7 +145,7 @@ const App: React.FC = () => {
       setAuthError(null);
 
       try {
-        const response = await authAPI.telegramInitAuth({ user });
+        const response = await authAPI.telegramInitAuth(initData);
         const newToken = response.data.token;
 
         if (!isMounted) return;
@@ -149,7 +173,7 @@ const App: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [isReady, isTelegram, user, location.pathname]);
+  }, [isReady, isTelegram, initData, user?.id]);
 
   if (!isReady || isLoadingAuthCheck) {
     return (

@@ -11,6 +11,7 @@ type UserRepository interface {
 	Create(ctx context.Context, u *domain.User) error
 	GetByID(ctx context.Context, userID string) (*domain.User, error)
 	GetByUsername(ctx context.Context, username string) (*domain.User, error)
+	GetByNickname(ctx context.Context, nickname string) (*domain.User, error)
 	ListByUsername(ctx context.Context, username string) ([]domain.User, error)
 	Update(ctx context.Context, u *domain.User) error
 	Delete(ctx context.Context, userID string) error
@@ -20,6 +21,13 @@ type UserRepository interface {
 	ListRecent(ctx context.Context, limit int) ([]domain.User, error)
 	ListForRating(ctx context.Context) ([]domain.User, error)
 	ListForRatingByMonth(ctx context.Context, month time.Time) ([]domain.User, error)
+}
+
+type ContactAuthRepository interface {
+	Create(ctx context.Context, challenge *domain.ContactAuthChallenge) error
+	GetByToken(ctx context.Context, token string) (*domain.ContactAuthChallenge, error)
+	Complete(ctx context.Context, token string, telegramUserID string, phoneNumber string) error
+	Consume(ctx context.Context, token string) error
 }
 
 type GameRepository interface {

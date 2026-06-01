@@ -42,6 +42,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_users_nick_name_unique_ci
     ON users (LOWER(nick_name))
     WHERE nick_name IS NOT NULL;
 
+CREATE TABLE IF NOT EXISTS contact_auth_challenges (
+    token VARCHAR(96) PRIMARY KEY,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    telegram_user_id VARCHAR(64),
+    phone_number VARCHAR(20),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL,
+    completed_at TIMESTAMPTZ,
+    consumed_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_contact_auth_expires_at
+    ON contact_auth_challenges (expires_at);
+
 CREATE TABLE IF NOT EXISTS games (
     game_id SERIAL PRIMARY KEY,
     date DATE NOT NULL,

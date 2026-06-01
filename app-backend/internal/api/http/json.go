@@ -14,6 +14,7 @@ func userToMap(u *domain.User) map[string]any {
 	m := map[string]any{
 		"user_id":            u.UserID,
 		"username":           u.Username,
+		"has_password":       u.Password != "",
 		"points":             u.Points,
 		"total_games_played": u.TotalGamesPlayed,
 		"is_admin":           u.IsAdmin,

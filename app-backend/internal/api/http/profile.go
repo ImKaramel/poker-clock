@@ -144,7 +144,12 @@ func (h *Handlers) ProfilePatch(c *gin.Context) {
 		u.LastName = body.LastName
 	}
 	if body.Phone != nil {
-		u.PhoneNumber = body.Phone
+		phone, ok := normalizePhoneNumber(*body.Phone)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid phone_number"})
+			return
+		}
+		u.PhoneNumber = &phone
 	}
 	if body.Email != nil {
 		u.Email = body.Email

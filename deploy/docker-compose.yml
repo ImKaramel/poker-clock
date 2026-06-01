@@ -27,6 +27,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME}
+      FRONTEND_URL: ${FRONTEND_URL}
       MINI_APP_URL: ${MINI_APP_URL}
       PORT: ${PORT}
       S3_ENDPOINT: ${S3_ENDPOINT}
@@ -57,6 +58,7 @@ services:
       API_BASE_URL: http://app-backend:8080/api
       ADMIN_TELEGRAM_IDS: ${ADMIN_TELEGRAM_IDS}
       MINI_APP_URL: ${MINI_APP_URL}
+      WEB_VERSION_URL: ${WEB_VERSION_URL}
     depends_on:
       - app-backend
     networks:

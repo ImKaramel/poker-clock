@@ -50,6 +50,9 @@ export default function Profile() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
   const [nick_name, setNick_name] = useState<string>("");
   const [historyTab, setHistoryTab] = useState<"active" | "past">("active");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [isSavingPhone, setIsSavingPhone] = useState(false);
+  const [phoneMessage, setPhoneMessage] = useState("");
 
   useEffect(() => {
     const getProfile = async () => {
@@ -76,6 +79,7 @@ export default function Profile() {
   useEffect(() => {
     if (!profile?.user) return;
     setNick_name(profile.user.nick_name || profile.user.first_name || "");
+    setPhoneNumber(profile.user.phone_number || "");
   }, [profile]);
 
   useEffect(() => {
@@ -109,7 +113,7 @@ export default function Profile() {
     try {
       setIsSavingNickname(true);
       setError("");
-      const response = await profileAPI.updateProfile(normalizedNickname);
+      const response = await profileAPI.updateProfile({ nick_name: normalizedNickname });
 
       if (response?.data?.user) {
         setProfile(response.data);
@@ -165,6 +169,41 @@ export default function Profile() {
     } finally {
       setIsUploadingAvatar(false);
       event.target.value = "";
+    }
+  };
+
+  const normalizePhone = (value: string) => value.replace(/[^\d+]/g, "").trim();
+
+  const savePhone = async () => {
+    const normalizedPhone = normalizePhone(phoneNumber);
+    if (!/^\+?\d{10,15}$/.test(normalizedPhone)) {
+      setError("Введите телефон в международном формате");
+      return;
+    }
+
+    try {
+      setIsSavingPhone(true);
+      setError("");
+      setPhoneMessage("");
+      const response = await profileAPI.updateProfile({ phone_number: normalizedPhone });
+
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              user: response?.data?.user || response?.data || {
+                ...prev.user,
+                phone_number: normalizedPhone,
+              },
+            }
+          : prev
+      );
+      setPhoneNumber(normalizedPhone);
+      setPhoneMessage("Телефон сохранён");
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || "Не удалось сохранить телефон");
+    } finally {
+      setIsSavingPhone(false);
     }
   };
 
@@ -315,6 +354,68 @@ export default function Profile() {
       <ProfileRating>
         <RatingTable rows={visibleRows} currentUserId={currentUserId} />
       </ProfileRating>
+
+      <div
+        style={{
+          width: "calc(100% - 54px)",
+          marginTop: 8,
+          padding: 20,
+          borderRadius: 25,
+          backgroundColor: "#151A22",
+          color: "#fff",
+        }}
+      >
+        <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 10 }}>
+          Телефон для доступа
+        </div>
+        {!profile?.user?.phone_number && (
+          <div
+            style={{
+              color: "#ffd166",
+              background: "rgba(255, 209, 102, 0.12)",
+              border: "1px solid rgba(255, 209, 102, 0.28)",
+              borderRadius: 12,
+              padding: "10px 12px",
+              fontSize: 13,
+              marginBottom: 12,
+            }}
+          >
+            Добавьте номер телефона, чтобы не потерять доступ к аккаунту.
+          </div>
+        )}
+        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 14 }}>
+          Веб-версия будет входить по SMS-коду. Парольный вход отключается.
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <InputWrapper>
+            <Input
+              type="tel"
+              placeholder="+79991234567"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              autoComplete="tel"
+            />
+          </InputWrapper>
+          <button
+            onClick={savePhone}
+            disabled={isSavingPhone}
+            style={{
+              minHeight: 44,
+              borderRadius: 12,
+              border: 0,
+              background: "#24a1de",
+              color: "#fff",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            {isSavingPhone ? "Сохраняем..." : "Сохранить телефон"}
+          </button>
+          {!!phoneMessage && (
+            <div style={{ fontSize: 13, color: "#9ae6b4" }}>{phoneMessage}</div>
+          )}
+        </div>
+      </div>
 
       <GameHistoryContainer>
         <GameHistoryWrapper>
