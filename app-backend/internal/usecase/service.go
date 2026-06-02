@@ -139,7 +139,7 @@ func (s *Service) issueToken(u *domain.User) (string, error) {
 }
 
 func generateContactAuthToken() (string, error) {
-	var b [32]byte
+	var b [18]byte
 	if _, err := rand.Read(b[:]); err != nil {
 		return "", err
 	}

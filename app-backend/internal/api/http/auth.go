@@ -83,7 +83,19 @@ func (h *Handlers) contactAuthBotLink(token string) string {
 	if username == "" {
 		username = "Midnight_poker_bot"
 	}
-	return fmt.Sprintf("https://t.me/%s?start=contact_%s", url.QueryEscape(username), url.QueryEscape(token))
+	payload := "contact_" + token
+	return fmt.Sprintf("https://t.me/%s?start=%s", url.QueryEscape(username), url.QueryEscape(payload))
+}
+
+func (h *Handlers) contactAuthTelegramSchemeLink(token string) string {
+	username := strings.TrimSpace(strings.TrimPrefix(h.TelegramBotUsername, "@"))
+	if username == "" {
+		username = "Midnight_poker_bot"
+	}
+	q := url.Values{}
+	q.Set("domain", username)
+	q.Set("start", "contact_"+token)
+	return "tg://resolve?" + q.Encode()
 }
 
 func (h *Handlers) ContactAuthStart(c *gin.Context) {
@@ -102,10 +114,12 @@ func (h *Handlers) ContactAuthStart(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"token":      challenge.Token,
-		"status":     challenge.Status,
-		"bot_link":   h.contactAuthBotLink(challenge.Token),
-		"expires_at": challenge.ExpiresAt.UTC().Format(time.RFC3339),
+		"token":         challenge.Token,
+		"status":        challenge.Status,
+		"bot_link":      h.contactAuthBotLink(challenge.Token),
+		"tg_link":       h.contactAuthTelegramSchemeLink(challenge.Token),
+		"login_command": "/login " + challenge.Token,
+		"expires_at":    challenge.ExpiresAt.UTC().Format(time.RFC3339),
 	})
 }
 

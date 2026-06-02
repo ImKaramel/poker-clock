@@ -5,6 +5,8 @@ import { authAPI } from "../../utils/api";
 
 const AUTH_TOKEN_CHANGED_EVENT = "auth-token-changed";
 const CONTACT_AUTH_TOKEN_KEY = "contact_auth_token";
+const CONTACT_AUTH_BOT_LINK_KEY = "contact_auth_bot_link";
+const CONTACT_AUTH_TG_LINK_KEY = "contact_auth_tg_link";
 
 type ContactAuthState = "idle" | "starting" | "pending" | "completed";
 
@@ -15,10 +17,13 @@ const WebAuth: React.FC = () => {
   const [challengeToken, setChallengeToken] = useState(
     () => localStorage.getItem(CONTACT_AUTH_TOKEN_KEY) || "",
   );
-  const [botLink, setBotLink] = useState("");
+  const [botLink, setBotLink] = useState(() => localStorage.getItem(CONTACT_AUTH_BOT_LINK_KEY) || "");
+  const [tgLink, setTgLink] = useState(() => localStorage.getItem(CONTACT_AUTH_TG_LINK_KEY) || "");
   const [status, setStatus] = useState<ContactAuthState>(challengeToken ? "pending" : "idle");
   const [error, setError] = useState(locationState?.authError || "");
   const isPollingRef = useRef(false);
+
+  const loginCommand = challengeToken ? `/login ${challengeToken}` : "";
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -32,6 +37,8 @@ const WebAuth: React.FC = () => {
     if (token) {
       localStorage.setItem("auth_token", token);
       localStorage.removeItem(CONTACT_AUTH_TOKEN_KEY);
+      localStorage.removeItem(CONTACT_AUTH_BOT_LINK_KEY);
+      localStorage.removeItem(CONTACT_AUTH_TG_LINK_KEY);
       window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
       navigate("/", { replace: true });
       return;
@@ -59,6 +66,8 @@ const WebAuth: React.FC = () => {
         if (response.data?.status === "completed" && response.data?.token) {
           localStorage.setItem("auth_token", response.data.token);
           localStorage.removeItem(CONTACT_AUTH_TOKEN_KEY);
+          localStorage.removeItem(CONTACT_AUTH_BOT_LINK_KEY);
+          localStorage.removeItem(CONTACT_AUTH_TG_LINK_KEY);
           window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
           setStatus("completed");
           navigate("/", { replace: true });
@@ -68,7 +77,11 @@ const WebAuth: React.FC = () => {
         const statusCode = err?.response?.status;
         if (statusCode === 410 || statusCode === 404 || statusCode === 409) {
           localStorage.removeItem(CONTACT_AUTH_TOKEN_KEY);
+          localStorage.removeItem(CONTACT_AUTH_BOT_LINK_KEY);
+          localStorage.removeItem(CONTACT_AUTH_TG_LINK_KEY);
           setChallengeToken("");
+          setBotLink("");
+          setTgLink("");
           setStatus("idle");
           setError("Ссылка подтверждения устарела. Запустите вход заново.");
         }
@@ -92,15 +105,40 @@ const WebAuth: React.FC = () => {
       const response = await authAPI.startContactAuth();
       const nextToken = response.data.token;
       const nextBotLink = response.data.bot_link;
+      const nextTgLink = response.data.tg_link;
 
       localStorage.setItem(CONTACT_AUTH_TOKEN_KEY, nextToken);
+      localStorage.setItem(CONTACT_AUTH_BOT_LINK_KEY, nextBotLink);
+      if (nextTgLink) {
+        localStorage.setItem(CONTACT_AUTH_TG_LINK_KEY, nextTgLink);
+      }
       setChallengeToken(nextToken);
       setBotLink(nextBotLink);
+      setTgLink(nextTgLink || "");
       setStatus("pending");
-      window.open(nextBotLink, "_blank", "noopener,noreferrer");
+      openBot(nextBotLink, nextTgLink);
     } catch (err: any) {
       setStatus("idle");
       setError(err?.response?.data?.error || err?.message || "Не удалось начать вход через Telegram.");
+    }
+  };
+
+  const openBot = (httpsLink = botLink, telegramLink = tgLink) => {
+    if (telegramLink) {
+      window.location.href = telegramLink;
+      return;
+    }
+    if (httpsLink) {
+      window.open(httpsLink, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const copyLoginCommand = async () => {
+    if (!loginCommand) return;
+    try {
+      await navigator.clipboard.writeText(loginCommand);
+    } catch {
+      window.prompt("Скопируйте команду и отправьте её боту", loginCommand);
     }
   };
 
@@ -154,17 +192,32 @@ const WebAuth: React.FC = () => {
           {status === "pending" && (
             <div style={pendingBoxStyle}>
               <div>Ожидаю подтверждение номера в Telegram.</div>
-              {botLink && (
-                <a href={botLink} target="_blank" rel="noopener noreferrer" style={linkStyle}>
+              {(botLink || tgLink) && (
+                <button
+                  type="button"
+                  onClick={() => openBot()}
+                  style={secondaryButtonStyle}
+                >
                   Открыть бота
-                </a>
+                </button>
+              )}
+              {loginCommand && (
+                <div style={commandBoxStyle}>
+                  <div style={{ color: "rgba(255,255,255,0.72)" }}>
+                    Если Telegram открыл только /start, отправьте боту команду:
+                  </div>
+                  <code style={commandStyle}>{loginCommand}</code>
+                  <button type="button" onClick={copyLoginCommand} style={copyButtonStyle}>
+                    Скопировать команду
+                  </button>
+                </div>
               )}
             </div>
           )}
         </section>
 
         <a
-          href="https://t.me/Midnight_poker_bot"
+          href={botLink || "https://t.me/Midnight_poker_bot"}
           target="_blank"
           rel="noopener noreferrer"
           style={{ color: "#54bde8", textAlign: "center", textDecoration: "none", fontWeight: 600 }}
@@ -214,10 +267,44 @@ const pendingBoxStyle: React.CSSProperties = {
   gap: 8,
 };
 
-const linkStyle: React.CSSProperties = {
-  color: "#54bde8",
-  textDecoration: "none",
+const secondaryButtonStyle: React.CSSProperties = {
+  minHeight: 38,
+  borderRadius: 8,
+  border: "1px solid rgba(84,189,232,0.6)",
+  background: "rgba(84,189,232,0.14)",
+  color: "#bfefff",
+  fontWeight: 800,
+  fontSize: 14,
+  cursor: "pointer",
+};
+
+const commandBoxStyle: React.CSSProperties = {
+  marginTop: 4,
+  display: "flex",
+  flexDirection: "column",
+  gap: 8,
+};
+
+const commandStyle: React.CSSProperties = {
+  display: "block",
+  padding: "10px",
+  borderRadius: 8,
+  background: "rgba(0,0,0,0.28)",
+  border: "1px solid rgba(255,255,255,0.14)",
+  color: "white",
+  overflowWrap: "anywhere",
+  fontSize: 13,
+};
+
+const copyButtonStyle: React.CSSProperties = {
+  minHeight: 36,
+  borderRadius: 8,
+  border: "1px solid rgba(255,255,255,0.2)",
+  background: "rgba(255,255,255,0.08)",
+  color: "white",
   fontWeight: 700,
+  fontSize: 14,
+  cursor: "pointer",
 };
 
 export default WebAuth;

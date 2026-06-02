@@ -88,6 +88,22 @@ def main_menu_markup() -> ReplyKeyboardMarkup:
     )
 
 
+def contact_auth_markup() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        [[KeyboardButton("Поделиться номером для входа", request_contact=True)]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+        input_field_placeholder="Нажмите кнопку ниже",
+    )
+
+
+def normalize_contact_auth_token(value: str) -> str:
+    value = (value or "").strip()
+    if value.startswith("contact_"):
+        return value.removeprefix("contact_").strip()
+    return value
+
+
 def fetch_recipients() -> list[dict[str, Any]]:
     response = requests.get(
         f"{API_BASE_URL}/bot/recipients",
@@ -190,18 +206,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     start_payload = context.args[0] if context.args else ""
     if start_payload.startswith("contact_"):
-        context.user_data[CONTACT_AUTH_TOKEN_KEY] = start_payload.removeprefix("contact_")
-        await safe_reply_text(
-            update,
-            "\n".join(
-                [
-                    f"👋 {user.first_name or 'Игрок'}, подтвердим вход в веб-версию.",
-                    "",
-                    "Нажмите кнопку «Поделиться номером» ниже. После этого вернитесь на сайт, вход завершится автоматически.",
-                ]
-            ),
-            reply_markup=main_menu_markup(),
-        )
+        await request_contact_for_auth(update, context, start_payload)
         return
 
     lines = [
@@ -222,6 +227,36 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
     await safe_reply_text(update, "\n".join(lines), reply_markup=main_menu_markup())
+
+
+async def request_contact_for_auth(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    raw_token: str,
+) -> None:
+    user = update.effective_user
+    token = normalize_contact_auth_token(raw_token)
+    if not token:
+        await safe_reply_text(update, "Пришлите команду в формате: /login код_с_сайта")
+        return
+
+    context.user_data[CONTACT_AUTH_TOKEN_KEY] = token
+    await safe_reply_text(
+        update,
+        "\n".join(
+            [
+                f"👋 {user.first_name or 'Игрок'}, подтвердим вход в веб-версию.",
+                "",
+                "Нажмите кнопку «Поделиться номером для входа» ниже. После этого вернитесь на сайт, вход завершится автоматически.",
+            ]
+        ),
+        reply_markup=contact_auth_markup(),
+    )
+
+
+async def login_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    token = context.args[0] if context.args else ""
+    await request_contact_for_auth(update, context, token)
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -427,6 +462,7 @@ def main() -> None:
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("login", login_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     app.add_handler(CommandHandler("cancel_broadcast", cancel_broadcast))
