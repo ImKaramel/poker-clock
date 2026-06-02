@@ -204,6 +204,12 @@ func (h *Handlers) TelegramAuth(c *gin.Context) {
 	})
 }
 
+func (h *Handlers) PasswordAuthDisabled(c *gin.Context) {
+	c.JSON(http.StatusGone, gin.H{
+		"error": "username and password auth is disabled",
+	})
+}
+
 func (h *Handlers) RegisterPassword(c *gin.Context) {
 	var body struct {
 		TelegramUsername string `json:"telegram_username"`
@@ -360,15 +366,30 @@ func (h *Handlers) TelegramWebAuthCallback(c *gin.Context) {
 		"is_new", isNew,
 	)
 
-	frontendURL := strings.TrimRight(h.FrontendURL, "/")
+	frontendURL := strings.TrimRight(strings.TrimSpace(h.FrontendURL), "/")
 	if frontendURL == "" {
-		frontendURL = "https://midnight-club-app.ru"
+		h.Log.Error("frontend url is empty")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "server configuration error",
+		})
+		return
 	}
-	redirectURL := fmt.Sprintf("%s/web-auth?token=%s", frontendURL, url.QueryEscape(token))
+
+	redirectURL, err := url.Parse(frontendURL + "/web-auth")
+	if err != nil {
+		h.Log.Error("invalid frontend url", "frontend_url", h.FrontendURL, "err", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "server configuration error",
+		})
+		return
+	}
+	q := redirectURL.Query()
+	q.Set("token", token)
+	redirectURL.RawQuery = q.Encode()
 
 	h.Log.Info("➡️ Redirecting to",
-		"url", redirectURL,
+		"url", redirectURL.String(),
 	)
 
-	c.Redirect(http.StatusFound, redirectURL)
+	c.Redirect(http.StatusFound, redirectURL.String())
 }

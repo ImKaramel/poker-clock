@@ -45,6 +45,11 @@ func Load() Config {
 		}
 	}
 
+	frontendURL := strings.TrimSpace(os.Getenv("FRONTEND_URL"))
+	if frontendURL == "" {
+		frontendURL = strings.TrimSpace(os.Getenv("WEB_VERSION_URL"))
+	}
+
 	return Config{
 		Addr:        ":" + port,
 		DatabaseURL: os.Getenv("DATABASE_URL"),
@@ -52,7 +57,7 @@ func Load() Config {
 		JWTTTL:      ttl,
 
 		TelegramBotToken:    os.Getenv("TELEGRAM_BOT_TOKEN"),
-		FrontendURL:         os.Getenv("FRONTEND_URL"),
+		FrontendURL:         frontendURL,
 		TelegramBotUsername: os.Getenv("TELEGRAM_BOT_USERNAME"),
 		MiniAppURL:          os.Getenv("MINI_APP_URL"),
 		AdminTelegramIDs:    adminIDs,

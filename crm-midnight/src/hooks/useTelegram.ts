@@ -2,22 +2,27 @@ import { useEffect, useState } from "react";
 
 const TELEGRAM_SCRIPT_ID = "telegram-web-app-sdk";
 const TELEGRAM_SCRIPT_SRC = "https://telegram.org/js/telegram-web-app.js";
-const TELEGRAM_HOSTS = new Set([
-  "midnight-club.ru",
-  "www.midnight-club.ru",
-  "localhost",
-  "127.0.0.1",
-]);
+const DEFAULT_TELEGRAM_SDK_HOSTS = "midnight-club.ru,www.midnight-club.ru,localhost,127.0.0.1";
+const TELEGRAM_HOSTS = new Set(
+  (process.env.REACT_APP_TELEGRAM_SDK_HOSTS || DEFAULT_TELEGRAM_SDK_HOSTS)
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean)
+);
 
 const shouldLoadTelegramSdk = () => {
   if (typeof window === "undefined") {
     return false;
   }
 
-  const launchParams = `${window.location.search}${window.location.hash}`;
+  if ((window as any).Telegram?.WebApp) {
+    return true;
+  }
+
+  const launchParams = `${window.location.search}&${window.location.hash}`;
   return (
     TELEGRAM_HOSTS.has(window.location.hostname.toLowerCase()) ||
-    launchParams.includes("tgWebAppData")
+    /tgWebApp/i.test(launchParams)
   );
 };
 
@@ -46,14 +51,19 @@ const loadTelegramSdk = async (): Promise<void> => {
 
   await new Promise<void>((resolve) => {
     const script = document.createElement("script");
+    const timeout = window.setTimeout(() => resolve(), 2500);
     script.id = TELEGRAM_SCRIPT_ID;
     script.src = TELEGRAM_SCRIPT_SRC;
     script.async = true;
     script.onload = () => {
+      window.clearTimeout(timeout);
       script.dataset.loaded = "true";
       resolve();
     };
-    script.onerror = () => resolve();
+    script.onerror = () => {
+      window.clearTimeout(timeout);
+      resolve();
+    };
     document.head.appendChild(script);
   });
 };

@@ -144,15 +144,14 @@ func TestPreviewCompleteGameResolvesUsersAndAddsKO(t *testing.T) {
 	repo.users["1"] = &domain.User{UserID: "1", Username: "sancho", NickName: &nick, IsActive: true}
 	repo.users["2"] = &domain.User{UserID: "2", Username: "doc", IsActive: true}
 	svc := &Service{Users: repo}
+	game := &domain.Game{BasePoints: 100}
 
-	preview, err := svc.previewCompleteGame(nil, CompleteGameInput{
-		Results: []CompleteResultInput{
-			{Position: 1, Nickname: "Санчо", KOCount: 2},
-			{Position: 2, Nickname: "unknown"},
-		},
+	preview, err := svc.buildCompletePreview(context.Background(), game, []CompleteResultInput{
+		{Position: 1, Nickname: "Санчо", KOCount: 2},
+		{Position: 2, Nickname: "unknown"},
 	})
 	if err != nil {
-		t.Fatalf("previewCompleteGame returned error: %v", err)
+		t.Fatalf("buildCompletePreview returned error: %v", err)
 	}
 	if len(preview.Results) != 2 {
 		t.Fatalf("expected 2 rows, got %d", len(preview.Results))
@@ -160,7 +159,7 @@ func TestPreviewCompleteGameResolvesUsersAndAddsKO(t *testing.T) {
 	if preview.Results[0].Status != "resolved" || preview.Results[0].User.UserID != "1" {
 		t.Fatalf("expected first row resolved to user 1, got %+v", preview.Results[0])
 	}
-	expected := scaledPlacePoints(2, 1) + 2*koRatingBonus
+	expected := ratingPlacePoints(game, 2, 1) + 2*100
 	if preview.Results[0].TotalPoints != expected {
 		t.Fatalf("expected %d points, got %d", expected, preview.Results[0].TotalPoints)
 	}

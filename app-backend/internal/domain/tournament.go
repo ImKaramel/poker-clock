@@ -31,4 +31,5 @@ type TournamentParticipant struct {
 	PaymentMethod       *string
 	Position            *int
 	FinalPoints         int
+	KOCount             int
 }

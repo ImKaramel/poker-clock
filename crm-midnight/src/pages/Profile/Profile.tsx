@@ -384,7 +384,7 @@ export default function Profile() {
           </div>
         )}
         <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 14 }}>
-          Веб-версия будет входить по SMS-коду. Парольный вход отключается.
+          Сейчас веб-версия подтверждает вход через Telegram-бота. Номер пригодится для восстановления доступа и будущего SMS-входа.
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <InputWrapper>

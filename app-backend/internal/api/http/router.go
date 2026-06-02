@@ -25,6 +25,9 @@ func Mount(
 	api.GET("/auth/contact/status", h.ContactAuthStatus)
 	api.POST("/auth/telegram", h.TelegramAuth)
 	api.GET("/auth/telegram/callback", h.TelegramWebAuthCallback)
+	api.POST("/auth/register", h.PasswordAuthDisabled)
+	api.POST("/auth/register/verify-code", h.PasswordAuthDisabled)
+	api.POST("/auth/login", h.PasswordAuthDisabled)
 	api.GET("/bot/recipients", h.BotRecipients)
 	api.POST("/bot/contact", h.BotContact)
 
@@ -94,6 +97,7 @@ func Mount(
 	authed := api.Group("")
 	authed.Use(jwtMW)
 	{
+		authed.POST("/auth/link-password", h.PasswordAuthDisabled)
 		authed.GET("/rating", h.Rating)
 		authed.GET("/profile", h.ProfileGet)
 		authed.PATCH("/profile", h.ProfilePatch)

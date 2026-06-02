@@ -344,6 +344,44 @@ type completeBody struct {
 	Results      []usecase.CompleteResultInput      `json:"results"`
 }
 
+func completePreviewToMap(preview *usecase.CompletePreview) map[string]any {
+	if preview == nil {
+		return map[string]any{
+			"results":    []map[string]any{},
+			"unresolved": []map[string]any{},
+		}
+	}
+	results := make([]map[string]any, 0, len(preview.Results))
+	for _, row := range preview.Results {
+		results = append(results, completePreviewRowToMap(row))
+	}
+	unresolved := make([]map[string]any, 0, len(preview.Unresolved))
+	for _, row := range preview.Unresolved {
+		unresolved = append(unresolved, completePreviewRowToMap(row))
+	}
+	return map[string]any{
+		"results":    results,
+		"unresolved": unresolved,
+	}
+}
+
+func completePreviewRowToMap(row usecase.CompletePreviewResult) map[string]any {
+	candidates := make([]map[string]any, 0, len(row.Candidates))
+	for i := range row.Candidates {
+		candidates = append(candidates, userToMap(&row.Candidates[i]))
+	}
+	return map[string]any{
+		"position":     row.Position,
+		"nickname":     row.Nickname,
+		"ko_count":     row.KOCount,
+		"base_points":  row.BasePoints,
+		"total_points": row.TotalPoints,
+		"status":       row.Status,
+		"user":         userToMap(row.User),
+		"candidates":   candidates,
+	}
+}
+
 func (h *Handlers) GameCompletePreview(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -355,24 +393,21 @@ func (h *Handlers) GameCompletePreview(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	preview, err := h.UC.PreviewCompleteGame(c.Request.Context(), id, usecase.CompleteGameInput{
-		Participants: body.Participants,
-		Results:      body.Results,
-	})
+	preview, err := h.UC.CompleteGamePreview(c.Request.Context(), id, body.Results)
 	if err != nil {
 		if errors.Is(err, usecase.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 			return
 		}
-		if errors.Is(err, usecase.ErrTournamentResultsRequired) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "results required"})
+		if errors.Is(err, usecase.ErrCompletionResultsRequired) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "results are required"})
 			return
 		}
 		h.Log.Error("complete game preview", "err", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to preview completion: " + err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, preview)
+	c.JSON(http.StatusOK, completePreviewToMap(preview))
 }
 
 func (h *Handlers) GameComplete(c *gin.Context) {
@@ -386,24 +421,30 @@ func (h *Handlers) GameComplete(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	th, err := h.UC.CompleteGame(c.Request.Context(), id, usecase.CompleteGameInput{
-		Participants: body.Participants,
-		Results:      body.Results,
-	})
+	th, err := h.UC.CompleteGame(c.Request.Context(), id, body.Participants, body.Results)
 	if err != nil {
 		if errors.Is(err, usecase.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 			return
 		}
-		if errors.Is(err, usecase.ErrTournamentResultsRequired) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "results required"})
+		if errors.Is(err, usecase.ErrCompletionAlreadyDone) {
+			c.JSON(http.StatusConflict, gin.H{"error": "game is already completed"})
 			return
 		}
-		var conflict *usecase.TournamentResultConflictError
-		if errors.As(err, &conflict) {
-			c.JSON(http.StatusConflict, gin.H{
-				"error":   "unresolved tournament results",
-				"preview": conflict.Preview,
+		if errors.Is(err, usecase.ErrCompletionResultsRequired) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "results are required"})
+			return
+		}
+		if errors.Is(err, usecase.ErrCompletionUnresolved) {
+			preview, previewErr := h.UC.CompleteGamePreview(c.Request.Context(), id, body.Results)
+			if previewErr != nil {
+				h.Log.Error("complete game unresolved preview", "err", previewErr)
+				c.JSON(http.StatusBadRequest, gin.H{"error": "unresolved users"})
+				return
+			}
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "unresolved users",
+				"preview": completePreviewToMap(preview),
 			})
 			return
 		}

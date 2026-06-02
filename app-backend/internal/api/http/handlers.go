@@ -102,6 +102,7 @@ func tournamentHistoryToMap(h *domain.TournamentHistory) map[string]any {
 			"payment_method_display": paymentMethodDisplay(p.PaymentMethod),
 			"position":               p.Position,
 			"final_points":           p.FinalPoints,
+			"ko_count":               p.KOCount,
 		})
 	}
 	m := map[string]any{

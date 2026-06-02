@@ -49,6 +49,7 @@ export interface TournamentHistoryParticipant {
   payment_method_display?: string,
   position?: number | null,
   final_points?: number,
+  ko_count?: number,
 }
 
 export interface TournamentHistoryType {
